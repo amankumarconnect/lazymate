@@ -1,13 +1,19 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, WebContentsView, BaseWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { chromium } from 'playwright-core'
+
+app.commandLine.appendSwitch('remote-debugging-port', '9222')
+
+let mainWindow: BrowserWindow | null = null
+let automationView: WebContentsView | null = null
 
 function createWindow(): void {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -18,7 +24,8 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow?.show()
+    initAutomationView()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -35,6 +42,78 @@ function createWindow(): void {
   }
 }
 
+function initAutomationView(): void {
+  if (!mainWindow) return
+  if (automationView) {
+    return
+  }
+  automationView = new WebContentsView({
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true
+    }
+  })
+  mainWindow.contentView.addChildView(automationView)
+  updateViewBounds()
+
+  const readyHtml = `
+    data:text/html;charset=utf-8,
+    <html>
+      <body style="background-color: #18181b; color: #a1a1aa; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0;">
+        <div style="text-align: center;">
+          <h1 style="margin: 0;">🤖 Automation Ready</h1>
+          <p style="font-size: 14px;">Waiting for script...</p>
+        </div>
+      </body>
+    </html>
+  `
+  automationView.webContents.loadURL(readyHtml)
+}
+
+function updateViewBounds(): void {
+  if (mainWindow && automationView) {
+    const bounds = mainWindow.getBounds()
+    const contentBounds = mainWindow.getContentBounds()
+    const leftSidebarWidth = 400
+    automationView.setBounds({
+      x: leftSidebarWidth,
+      y: 0,
+      width: contentBounds.width - leftSidebarWidth,
+      height: contentBounds.height
+    })
+  }
+}
+
+ipcMain.handle('run-automation', async (_event, { url, script }) => {
+  try {
+    if (!automationView) throw new Error('Automation view not ready')
+    const browser = await chromium.connectOverCDP('http://localhost:9222')
+    await automationView.webContents.loadURL(url)
+    const context = browser.contexts()[0]
+    const pages = context.pages()
+    const targetPage =
+      pages.find((p) => p.url() === automationView?.webContents.getURL()) || pages[pages.length - 1]
+    if (!targetPage) throw new Error('Could not connect to embedded browser')
+
+    const runUserScript = new Function(
+      'page',
+      `return (async () => {
+      try{
+        ${script}
+      } catch(e) { throw e}
+    })()`
+    )
+
+    await runUserScript(targetPage)
+
+    return { success: true }
+  } catch (error: any) {
+    console.error(error)
+    return { success: false, error: error.message }
+  }
+})
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -48,9 +127,6 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
-
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
 
   createWindow()
 
