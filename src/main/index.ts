@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { chromium, Page } from 'playwright-core'
+import { isJobRelevant, generateApplication } from './gemini'
 
 // 1. Enable Debugging Port for Playwright
 app.commandLine.appendSwitch('remote-debugging-port', '9222')
@@ -59,12 +60,6 @@ function createWindow(): void {
 
 // --- AUTOMATION LOGIC ---
 
-// Helper: AI Generation (Mock)
-async function generateApplication(jobText: string, userProfile: string, apiKey: string) {
-  // Mock return for testing
-  return `Hi! I read your job description for ${jobText.slice(0, 20)}... and I think my skills in ${userProfile.slice(0, 20)}... are a great fit.`
-}
-
 // Helper: URL Cleaner
 function getFullUrl(partialUrl: string): string {
   if (partialUrl.startsWith('http')) return partialUrl
@@ -74,7 +69,7 @@ function getFullUrl(partialUrl: string): string {
 // Global set to remember visited companies
 const visitedCompanies = new Set<string>()
 
-ipcMain.handle('start-automation', async (event, { userProfile, apiKey }) => {
+ipcMain.handle('start-automation', async (_event, { userProfile }) => {
   automationRunning = true
   
   const log = (msg: string, page?: Page) => {
@@ -199,21 +194,41 @@ ipcMain.handle('start-automation', async (event, { userProfile, apiKey }) => {
                   if ((await appliedBtn.count()) > 0) {
                     log('Already applied.', page)
                   } else {
-                    // APPLY FLOW
-                    const applyBtn = page.getByText('Apply', { exact: true }).first()
-                    if (await applyBtn.isVisible()) {
-                      await applyBtn.click()
-                      await page.waitForTimeout(500)
-                    }
+                    // GET JOB DESCRIPTION TEXT
+                    const jobDescriptionText = await page.evaluate(() => {
+                      // Try to get the main job description content
+                      const content = document.querySelector('main') || document.body
+                      return content.innerText.slice(0, 3000) // Limit to 3000 chars for API
+                    })
 
-                    const textArea = page.locator('textarea').first()
-                    if (await textArea.isVisible()) {
-                      const coverLetter = `Hi! I am a software engineer... (AI for ${jobTitle})`
-                      await textArea.pressSequentially(coverLetter, { delay: 50 })
-                      log('Filled application.', page)
-                      
-                      // await page.getByRole('button', { name: 'Send Application' }).click()
-                      // await page.waitForTimeout(1000)
+                    // AI: CHECK IF JOB IS RELEVANT
+                    log('🤖 AI analyzing job fit...', page)
+                    const isRelevant = await isJobRelevant(jobDescriptionText, userProfile)
+
+                    if (!isRelevant) {
+                      log('❌ AI: Job not a good fit, skipping.', page)
+                    } else {
+                      log('✅ AI: Job is a good fit! Generating application...', page)
+
+                      // APPLY FLOW
+                      const applyBtn = page.getByText('Apply', { exact: true }).first()
+                      if (await applyBtn.isVisible()) {
+                        await applyBtn.click()
+                        await page.waitForTimeout(500)
+                      }
+
+                      const textArea = page.locator('textarea').first()
+                      if (await textArea.isVisible()) {
+                        // AI: GENERATE APPLICATION
+                        const coverLetter = await generateApplication(jobDescriptionText, userProfile)
+                        log('📝 Typing application...', page)
+                        await textArea.pressSequentially(coverLetter, { delay: 30 })
+                        log('✅ Application filled! (Not submitted - testing mode)', page)
+                        
+                        // NOT SUBMITTING - Testing mode
+                        // await page.getByRole('button', { name: 'Send Application' }).click()
+                        // await page.waitForTimeout(1000)
+                      }
                     }
                   }
                 } catch (e: any) {
