@@ -56,7 +56,7 @@ JOB DESCRIPTION:
 ${jobDescription}
 
 INSTRUCTIONS:
-- Write a concise, personalized application (150-250 words max)
+- Write a personalized application
 - Highlight relevant skills and experience from the user's profile
 - Show genuine interest in the specific role and company
 - Be professional but personable
