@@ -66,6 +66,15 @@ function getFullUrl(partialUrl: string): string {
   return `https://www.workatastartup.com${partialUrl}`
 }
 
+// Helper: Scroll to an element smoothly, wait a beat so the user can track it
+async function scrollAndHighlight(page: Page, locator: ReturnType<Page['locator']>): Promise<void> {
+  await locator.evaluate((el) => {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  })
+  // Wait for the smooth scroll animation to finish + a brief pause for visibility
+  await page.waitForTimeout(800)
+}
+
 // Global set to remember visited companies
 const visitedCompanies = new Set<string>()
 
@@ -152,7 +161,13 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
         const companyUrl = getFullUrl(relativeUrl)
         log(`Checking: ${companyUrl}`, page)
 
-        // Navigate
+        // Scroll to the company link on the list page for visual feedback, then navigate
+        const companyLink = page.locator(`a[href="${relativeUrl}"]`).first()
+        try {
+          await scrollAndHighlight(page, companyLink)
+        } catch {
+          // Element may not be visible, that's okay
+        }
         await page.goto(companyUrl)
 
         try {
@@ -172,6 +187,10 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
 
           for (const jobLink of jobLinks) {
             if (!automationRunning) break
+
+            // Scroll to the job link so the user can see it in the BrowserView
+            await scrollAndHighlight(page, jobLink)
+
             const jobTitle = await jobLink.innerText()
             const rawJobHref = await jobLink.getAttribute('href')
 
@@ -188,7 +207,7 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
             const fullJobUrl = getFullUrl(rawJobHref)
             log(`>> Role: ${jobTitle}`, page)
 
-            // Navigate to Job
+            // Navigate to the job page (don't click — links open in new tabs on this site)
             await page.goto(fullJobUrl)
             await page.waitForTimeout(1500)
 
@@ -217,12 +236,16 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
                   // APPLY FLOW
                   const applyBtn = page.getByText('Apply', { exact: true }).first()
                   if (await applyBtn.isVisible()) {
+                    await scrollAndHighlight(page, applyBtn)
                     await applyBtn.click()
                     await page.waitForTimeout(500)
                   }
 
                   const textArea = page.locator('textarea').first()
                   if (await textArea.isVisible()) {
+                    // Scroll to the textarea so the user sees the application being typed
+                    await scrollAndHighlight(page, textArea)
+
                     // AI: GENERATE APPLICATION
                     const coverLetter = await generateApplication(jobDescriptionText, userProfile)
                     log('📝 Typing application...', page)
