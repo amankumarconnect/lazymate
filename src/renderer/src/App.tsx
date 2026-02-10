@@ -1,4 +1,4 @@
-import React, { useState, useEffect, JSX } from 'react'
+import React, { useState, useEffect, useRef, JSX } from 'react'
 import { Button } from './components/ui/button'
 import { Textarea } from './components/ui/textarea'
 import { ScrollArea } from './components/ui/scroll-area'
@@ -8,6 +8,8 @@ function App(): JSX.Element {
   const [profile, setProfile] = useState('')
   const [logs, setLogs] = useState<string[]>([])
   const [isRunning, setIsRunning] = useState(false)
+  const [isParsing, setIsParsing] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     // Listen for logs from Main process
@@ -17,15 +19,42 @@ function App(): JSX.Element {
     })
   }, [])
 
-  const handleStart = () => {
+  const handleStart = (): void => {
     setIsRunning(true)
-    // @ts-ignore
+    // @ts-ignore (Assuming window.api exists from preload)
     window.api.startAutomation({ userProfile: profile })
   }
 
-  const handleStop = () => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setIsParsing(true)
+    setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] Uploading resume...`])
+
+    try {
+      const buffer = await file.arrayBuffer()
+      // @ts-ignore (Assuming window.api exists from preload)
+      const text = await window.api.parseResume(buffer)
+      setProfile(text)
+      setLogs((prev) => [
+        ...prev,
+        `[${new Date().toLocaleTimeString()}] Resume parsed successfully!`
+      ])
+    } catch (error) {
+      console.error(error)
+      setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] Error parsing resume`])
+    } finally {
+      setIsParsing(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleStop = (): void => {
     setIsRunning(false)
-    // @ts-ignore
+    // @ts-ignore (Assuming window.api exists from preload)
     window.api.stopAutomation()
   }
 
@@ -41,6 +70,21 @@ function App(): JSX.Element {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Your Profile</CardTitle>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept=".pdf"
+              onChange={handleFileUpload}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isParsing || isRunning}
+            >
+              {isParsing ? 'Parsing...' : 'Upload PDF Resume'}
+            </Button>
           </CardHeader>
           <CardContent className="space-y-3">
             <Textarea

@@ -4,6 +4,7 @@ import { electronApp, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { chromium, Page } from 'playwright-core'
 import { isJobTitleRelevant, isJobRelevant, generateApplication } from './ollama'
+import { PDFParse } from 'pdf-parse'
 
 // 1. Enable Debugging Port for Playwright
 app.commandLine.appendSwitch('remote-debugging-port', '9222')
@@ -310,6 +311,18 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
 ipcMain.on('stop-automation', () => {
   automationRunning = false
   mainWindow.webContents.send('log', 'Stopping automation...')
+})
+
+ipcMain.handle('parse-resume', async (_event, buffer: ArrayBuffer) => {
+  try {
+    const parser = new PDFParse({ data: Buffer.from(buffer) })
+    const result = await parser.getText()
+    await parser.destroy()
+    return result.text
+  } catch (error: any) {
+    console.error('Error parsing PDF:', error)
+    throw new Error('Failed to parse PDF')
+  }
 })
 
 app.whenReady().then(() => {

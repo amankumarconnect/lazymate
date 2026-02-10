@@ -97,7 +97,7 @@ const DESCRIPTION_THRESHOLD = 0.5
  */
 export async function isJobRelevant(jobDescription: string, userProfile: string): Promise<boolean> {
   try {
-    // Truncate job description if it's too long to avoid context limits (though embeddings handle large contexts well, 
+    // Truncate job description if it's too long to avoid context limits (though embeddings handle large contexts well,
     // performance might degrade or it might capture too much noise).
     // For embeddings, sending the first 2000-3000 chars is usually enough to capture the core of the job.
 
