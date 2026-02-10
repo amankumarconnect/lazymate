@@ -168,6 +168,8 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
         } catch {
           // Element may not be visible, that's okay
         }
+        // Save list scroll position
+        const listScrollY = await page.evaluate(() => window.scrollY)
         await page.goto(companyUrl)
 
         try {
@@ -206,6 +208,9 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
 
             const fullJobUrl = getFullUrl(rawJobHref)
             log(`>> Role: ${jobTitle}`, page)
+
+            // Save company page scroll position
+            const companyScrollY = await page.evaluate(() => window.scrollY)
 
             // Navigate to the job page (don't click — links open in new tabs on this site)
             await page.goto(fullJobUrl)
@@ -265,6 +270,8 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
             // Go back to Company Page
             await page.goBack()
             await page.waitForTimeout(1000)
+            // Restore company page scroll
+            await page.evaluate((y) => window.scrollTo(0, y), companyScrollY)
           }
         }
 
@@ -275,6 +282,8 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
         // Verify we actually made it back
         try {
           await page.waitForSelector('a[href^="/companies/"]', { timeout: 3000 })
+          // Restore list scroll
+          await page.evaluate((y) => window.scrollTo(0, y), listScrollY)
         } catch (e) {
           log('List failed to render. Forcing reload...', page)
           await page.goto('https://www.workatastartup.com/companies')
