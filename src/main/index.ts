@@ -3,7 +3,7 @@ import { join } from 'path'
 import { electronApp, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { chromium, Page } from 'playwright-core'
-import { isJobTitleRelevant, isJobRelevant, generateApplication } from './gemini'
+import { isJobTitleRelevant, isJobRelevant, generateApplication } from './ollama'
 
 // 1. Enable Debugging Port for Playwright
 app.commandLine.appendSwitch('remote-debugging-port', '9222')
@@ -71,13 +71,13 @@ const visitedCompanies = new Set<string>()
 
 ipcMain.handle('start-automation', async (_event, { userProfile }) => {
   automationRunning = true
-  
+
   const log = (msg: string, page?: Page) => {
     const url = page ? page.url() : 'Init'
     // Cleaner log format
-    const displayUrl = url.includes('workatastartup.com') 
-        ? url.split('workatastartup.com')[1] 
-        : 'External Site'
+    const displayUrl = url.includes('workatastartup.com')
+      ? url.split('workatastartup.com')[1]
+      : 'External Site'
     mainWindow.webContents.send('log', `[${displayUrl}] ${msg}`)
   }
 
@@ -98,11 +98,11 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
     while (automationRunning) {
       // --- STEP 1: ENSURE WE ARE ON THE LIST ---
       const isListUrl = page.url().includes('/companies') && !page.url().includes('/companies/')
-      
+
       if (!isListUrl) {
-          log('Not on list page. Navigating...', page)
-          await page.goto('https://www.workatastartup.com/companies')
-          await page.waitForTimeout(2000)
+        log('Not on list page. Navigating...', page)
+        await page.goto('https://www.workatastartup.com/companies')
+        await page.waitForTimeout(2000)
       }
 
       // Wait for list to load
@@ -117,20 +117,18 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
       // --- STEP 2: SCRAPE LINKS ---
       const companiesOnScreen = await page.evaluate(() => {
         const anchors = Array.from(document.querySelectorAll('a[href^="/companies/"]'))
-        return (
-          anchors
-            .map((a) => a.getAttribute('href'))
-            .filter(
-              (href): href is string =>
-                href !== null && 
-                !href.includes('/jobs/') && 
-                !href.startsWith('http') && // Only take internal relative links
-                !href.includes('/website') && // --- FIX: Exclude website links
-                !href.includes('/twitter') &&
-                !href.includes('/linkedin')
-            )
-            .filter((value, index, self) => self.indexOf(value) === index)
-        )
+        return anchors
+          .map((a) => a.getAttribute('href'))
+          .filter(
+            (href): href is string =>
+              href !== null &&
+              !href.includes('/jobs/') &&
+              !href.startsWith('http') && // Only take internal relative links
+              !href.includes('/website') && // --- FIX: Exclude website links
+              !href.includes('/twitter') &&
+              !href.includes('/linkedin')
+          )
+          .filter((value, index, self) => self.indexOf(value) === index)
       })
 
       const newCompanies = companiesOnScreen.filter((c) => !visitedCompanies.has(c))
@@ -149,26 +147,26 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
         if (!automationRunning) break
 
         visitedCompanies.add(relativeUrl)
-        
+
         // Construct Company URL safely
         const companyUrl = getFullUrl(relativeUrl)
         log(`Checking: ${companyUrl}`, page)
 
         // Navigate
         await page.goto(companyUrl)
-        
+
         try {
-            await page.waitForLoadState('domcontentloaded')
-            await page.waitForTimeout(1500) 
-        } catch(e) {
-            log('Timeout loading company, skipping.', page)
-            continue
+          await page.waitForLoadState('domcontentloaded')
+          await page.waitForTimeout(1500)
+        } catch (e) {
+          log('Timeout loading company, skipping.', page)
+          continue
         }
 
         // FIND ENGINEERING JOBS
         // Sometimes jobs are 'a' tags with href containing /jobs/
         const jobLinks = await page.locator('a[href*="/jobs/"]').all()
-        
+
         if (jobLinks.length > 0) {
           log(`Found ${jobLinks.length} jobs.`, page)
 
@@ -253,13 +251,13 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
 
         // Verify we actually made it back
         try {
-            await page.waitForSelector('a[href^="/companies/"]', { timeout: 3000 })
+          await page.waitForSelector('a[href^="/companies/"]', { timeout: 3000 })
         } catch (e) {
-            log('List failed to render. Forcing reload...', page)
-            await page.goto('https://www.workatastartup.com/companies')
-            await page.waitForLoadState('networkidle')
+          log('List failed to render. Forcing reload...', page)
+          await page.goto('https://www.workatastartup.com/companies')
+          await page.waitForLoadState('networkidle')
         }
-        
+
         await page.waitForTimeout(1000)
       }
     }
@@ -267,11 +265,10 @@ ipcMain.handle('start-automation', async (_event, { userProfile }) => {
     // --- FIX: Disconnect safely ---
     log('Automation stopped.')
     try {
-        await browser.close() 
+      await browser.close()
     } catch (e) {
-        // Ignore disconnection errors
+      // Ignore disconnection errors
     }
-
   } catch (error: any) {
     console.error(error)
     mainWindow.webContents.send('log', `Error: ${error.message}`)
