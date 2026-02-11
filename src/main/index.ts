@@ -104,13 +104,20 @@ ipcMain.handle('start-automation', async () => {
   }
   automationRunning = true
 
-  const log = (msg: string, page?: Page): void => {
-    const url = page ? page.url() : 'Init'
-    // Cleaner log format
-    const displayUrl = url.includes('workatastartup.com')
-      ? url.split('workatastartup.com')[1]
-      : 'External Site'
-    mainWindow.webContents.send('log', `[${displayUrl}] ${msg}`)
+  const log = (
+    msg: string,
+    opts?: {
+      type?: 'info' | 'success' | 'error' | 'skip' | 'match'
+      jobTitle?: string
+      matchScore?: number
+    }
+  ): void => {
+    mainWindow.webContents.send('log', {
+      message: msg,
+      type: opts?.type || 'info',
+      jobTitle: opts?.jobTitle,
+      matchScore: opts?.matchScore
+    })
   }
 
   log('Connecting to browser...')
@@ -125,14 +132,14 @@ ipcMain.handle('start-automation', async () => {
     if (!page) throw new Error('Please navigate to Work At A Startup first!')
 
     await page.bringToFront()
-    log('Starting Loop...', page)
+    log('Starting automation loop...')
 
     while (automationRunning) {
       // --- STEP 1: ENSURE WE ARE ON THE LIST ---
       const isListUrl = page.url().includes('/companies') && !page.url().includes('/companies/')
 
       if (!isListUrl) {
-        log('Not on list page. Navigating...', page)
+        log('Not on list page. Navigating...')
         await page.goto('https://www.workatastartup.com/companies')
         await page.waitForTimeout(2000)
       }
@@ -141,7 +148,7 @@ ipcMain.handle('start-automation', async () => {
       try {
         await page.waitForSelector('a[href^="/companies/"]', { timeout: 5000 })
       } catch {
-        log('Page empty? Reloading list...', page)
+        log('Page empty? Reloading list...')
         await page.reload()
         await page.waitForSelector('a[href^="/companies/"]', { timeout: 10000 })
       }
@@ -165,10 +172,10 @@ ipcMain.handle('start-automation', async () => {
 
       const newCompanies = companiesOnScreen.filter((c) => !visitedCompanies.has(c))
 
-      log(`Found ${newCompanies.length} new companies.`, page)
+      log(`Found ${newCompanies.length} new companies.`)
 
       if (newCompanies.length === 0) {
-        log('No new companies. Scrolling...', page)
+        log('No new companies. Scrolling...')
         await page.mouse.wheel(0, 3000)
         await page.waitForTimeout(3000)
         continue
@@ -182,7 +189,7 @@ ipcMain.handle('start-automation', async () => {
 
         // Construct Company URL safely
         const companyUrl = getFullUrl(relativeUrl)
-        log(`Checking: ${companyUrl}`, page)
+        log(`Checking company: ${relativeUrl.replace('/companies/', '')}`)
 
         // Scroll to the company link on the list page for visual feedback, then navigate
         const companyLink = page.locator(`a[href="${relativeUrl}"]`).first()
@@ -199,7 +206,7 @@ ipcMain.handle('start-automation', async () => {
           await page.waitForLoadState('domcontentloaded')
           await page.waitForTimeout(1500)
         } catch {
-          log('Timeout loading company, skipping.', page)
+          log('Timeout loading company, skipping.', { type: 'skip' })
           continue
         }
 
@@ -208,7 +215,7 @@ ipcMain.handle('start-automation', async () => {
         const jobLinks = await page.locator('a[href*="/jobs/"]').all()
 
         if (jobLinks.length > 0) {
-          log(`Found ${jobLinks.length} jobs.`, page)
+          log(`Found ${jobLinks.length} job(s) at this company.`)
 
           for (const jobLink of jobLinks) {
             if (!automationRunning) break
@@ -216,21 +223,33 @@ ipcMain.handle('start-automation', async () => {
             // Scroll to the job link so the user can see it in the BrowserView
             await scrollAndHighlight(page, jobLink)
 
-            const jobTitle = await jobLink.innerText()
+            const jobTitle = (await jobLink.innerText()).trim()
             const rawJobHref = await jobLink.getAttribute('href')
 
             if (!rawJobHref) continue
 
+            // Skip generic links like "View job", "Apply", etc.
+            if (jobTitle.length < 5 || /^(view|apply|see|open)\s/i.test(jobTitle)) continue
+
             // AI: Quick title check before navigating to save time
-            log(`🔍 Checking title: ${jobTitle}`, page)
-            const titleRelevant = await isJobTitleRelevant(jobTitle, userProfile.embedding)
-            if (!titleRelevant) {
-              log(`⏭️ Title not relevant, skipping.`, page)
+            log(`Checking title match...`, { jobTitle })
+            const titleResult = await isJobTitleRelevant(jobTitle, userProfile.embedding)
+            if (!titleResult.relevant) {
+              log(`Title not relevant, skipping.`, {
+                type: 'skip',
+                jobTitle,
+                matchScore: titleResult.score
+              })
               continue
             }
 
+            log(`Title looks relevant!`, {
+              type: 'match',
+              jobTitle,
+              matchScore: titleResult.score
+            })
+
             const fullJobUrl = getFullUrl(rawJobHref)
-            log(`>> Role: ${jobTitle}`, page)
 
             // Save company page scroll position
             const companyScrollY = await page.evaluate(() => window.scrollY)
@@ -243,7 +262,7 @@ ipcMain.handle('start-automation', async () => {
               // CHECK: Already Applied?
               const appliedBtn = page.getByText('Applied', { exact: true })
               if ((await appliedBtn.count()) > 0) {
-                log('Already applied.', page)
+                log('Already applied, skipping.', { type: 'skip', jobTitle })
               } else {
                 // GET JOB DESCRIPTION TEXT
                 const jobDescriptionText = await page.evaluate(() => {
@@ -253,13 +272,21 @@ ipcMain.handle('start-automation', async () => {
                 })
 
                 // AI: CHECK IF JOB IS RELEVANT (deep check on full description)
-                log('🤖 AI analyzing job fit...', page)
-                const isRelevant = await isJobRelevant(jobDescriptionText, userProfile.embedding)
+                log('AI analyzing job description...', { jobTitle })
+                const fitResult = await isJobRelevant(jobDescriptionText, userProfile.embedding)
 
-                if (!isRelevant) {
-                  log('❌ AI: Job not a good fit, skipping.', page)
+                if (!fitResult.relevant) {
+                  log('Not a good fit, skipping.', {
+                    type: 'skip',
+                    jobTitle,
+                    matchScore: fitResult.score
+                  })
                 } else {
-                  log('✅ AI: Job is a good fit! Generating application...', page)
+                  log('Good fit! Generating application...', {
+                    type: 'success',
+                    jobTitle,
+                    matchScore: fitResult.score
+                  })
 
                   // APPLY FLOW
                   const applyBtn = page.getByText('Apply', { exact: true }).first()
@@ -279,9 +306,12 @@ ipcMain.handle('start-automation', async () => {
                       jobDescriptionText,
                       userProfile.text
                     )
-                    log('📝 Typing application...', page)
+                    log('Typing application...', { jobTitle })
                     await textArea.pressSequentially(coverLetter, { delay: 30 })
-                    log('✅ Application filled! (Not submitted - testing mode)', page)
+                    log('Application filled! (Not submitted - testing mode)', {
+                      type: 'success',
+                      jobTitle
+                    })
 
                     // NOT SUBMITTING - Testing mode
                     // await page.getByRole('button', { name: 'Send Application' }).click()
@@ -290,7 +320,7 @@ ipcMain.handle('start-automation', async () => {
                 }
               }
             } catch (e) {
-              log(`Skipping job: ${(e as Error).message}`, page)
+              log(`Error: ${(e as Error).message}`, { type: 'error', jobTitle })
             }
 
             // Go back to Company Page
@@ -302,7 +332,7 @@ ipcMain.handle('start-automation', async () => {
         }
 
         // --- STEP 4: RETURN TO LIST ---
-        log('Returning to list...', page)
+        log('Returning to list...')
         await page.goBack()
 
         // Verify we actually made it back
@@ -311,7 +341,7 @@ ipcMain.handle('start-automation', async () => {
           // Restore list scroll
           await page.evaluate((y) => window.scrollTo(0, y), listScrollY)
         } catch {
-          log('List failed to render. Forcing reload...', page)
+          log('List failed to render. Forcing reload...')
           await page.goto('https://www.workatastartup.com/companies')
           await page.waitForLoadState('networkidle')
         }
@@ -329,13 +359,16 @@ ipcMain.handle('start-automation', async () => {
     }
   } catch (error) {
     console.error(error)
-    mainWindow.webContents.send('log', `Error: ${(error as Error).message}`)
+    mainWindow.webContents.send('log', {
+      message: (error as Error).message,
+      type: 'error'
+    })
   }
 })
 
 ipcMain.on('stop-automation', () => {
   automationRunning = false
-  mainWindow.webContents.send('log', 'Stopping automation...')
+  mainWindow.webContents.send('log', { message: 'Stopping automation...', type: 'info' })
 })
 
 ipcMain.handle('parse-resume', async (_event, buffer: ArrayBuffer) => {

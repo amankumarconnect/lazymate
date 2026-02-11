@@ -1,16 +1,20 @@
 import { useState, useEffect, JSX } from 'react'
 import { Header } from './components/dashboard/Header'
-import { ActivityLog } from './components/dashboard/ActivityLog'
+import { ActivityLog, LogEntry } from './components/dashboard/ActivityLog'
 import { ProfileEditView } from './components/dashboard/ProfileEditView'
 import { ProfileReadView } from './components/dashboard/ProfileReadView'
 
 function App(): JSX.Element {
   const [profile, setProfile] = useState('')
-  const [logs, setLogs] = useState<string[]>([])
+  const [logs, setLogs] = useState<LogEntry[]>([])
   const [isRunning, setIsRunning] = useState(false)
   const [isParsing, setIsParsing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
+
+  const addLog = (entry: Omit<LogEntry, 'timestamp'>): void => {
+    setLogs((prev) => [...prev, { ...entry, timestamp: new Date() }])
+  }
 
   useEffect(() => {
     // Load existing profile
@@ -36,9 +40,10 @@ function App(): JSX.Element {
   useEffect(() => {
     // Listen for logs from Main process
     // @ts-ignore (Assuming window.api exists from preload)
-    window.api.onLog((msg: string) => {
-      setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`])
+    const cleanup = window.api.onLog((msg: LogEntry) => {
+      setLogs((prev) => [...prev, { ...msg, timestamp: new Date() }])
     })
+    return cleanup
   }, [])
 
   const handleStart = (): void => {
@@ -52,37 +57,31 @@ function App(): JSX.Element {
       // @ts-ignore (window.api is exposed by preload)
       await window.api.saveUserProfile(profile)
       setEditMode(false)
-      setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] Profile saved!`])
+      addLog({ message: 'Profile saved!', type: 'success' })
     } catch (error) {
       console.error('Failed to save profile:', error)
-      setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] Error saving profile`])
+      addLog({ message: 'Error saving profile', type: 'error' })
     }
   }
 
   const handleFileUpload = async (file: File): Promise<void> => {
     setIsParsing(true)
-    setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] Uploading resume...`])
+    addLog({ message: 'Uploading resume...', type: 'info' })
 
     try {
       const buffer = await file.arrayBuffer()
       // @ts-ignore (window.api is exposed by preload)
       const text = await window.api.parseResume(buffer)
       setProfile(text)
-      setLogs((prev) => [
-        ...prev,
-        `[${new Date().toLocaleTimeString()}] Resume parsed successfully!`
-      ])
+      addLog({ message: 'Resume parsed successfully!', type: 'success' })
       // Auto-save after parse
       // @ts-ignore (window.api is exposed by preload)
       await window.api.saveUserProfile(text)
       setEditMode(false)
-      setLogs((prev) => [
-        ...prev,
-        `[${new Date().toLocaleTimeString()}] Profile saved automatically!`
-      ])
+      addLog({ message: 'Profile saved automatically!', type: 'success' })
     } catch (error) {
       console.error(error)
-      setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] Error parsing resume`])
+      addLog({ message: 'Error parsing resume', type: 'error' })
     } finally {
       setIsParsing(false)
     }

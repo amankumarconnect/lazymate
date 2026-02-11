@@ -6,7 +6,7 @@ const MODEL_EMBEDDING = 'qwen3-embedding:0.6b'
 
 // Simple in-memory cache for job titles to save inference time
 const MAX_CACHE_SIZE = 100
-const jobTitleCache = new Map<string, boolean>()
+const jobTitleCache = new Map<string, { relevant: boolean; score: number }>()
 
 // Configurable thresholds for similarity
 // 0.4 is a common baseline for semantic similarity, but tune as needed.
@@ -49,7 +49,7 @@ export async function getEmbedding(text: string): Promise<number[]> {
 export async function isJobTitleRelevant(
   jobTitle: string,
   userProfileEmbedding: number[]
-): Promise<boolean> {
+): Promise<{ relevant: boolean; score: number }> {
   // Check cache first
   const cacheKey = `${jobTitle.trim()}|${userProfileEmbedding.length}` // approximate key
   if (jobTitleCache.has(cacheKey)) {
@@ -61,7 +61,7 @@ export async function isJobTitleRelevant(
 
     if (titleEmbedding.length === 0 || userProfileEmbedding.length === 0) {
       console.warn('[AI Title Check] Failed to get embeddings, defaulting to TRUE')
-      return true
+      return { relevant: true, score: -1 }
     }
 
     const similarity = cosineSimilarity(titleEmbedding, userProfileEmbedding)
@@ -73,18 +73,20 @@ export async function isJobTitleRelevant(
       }`
     )
 
+    const result = { relevant: isRelevant, score: Math.round(similarity * 100) }
+
     // Update cache
     if (jobTitleCache.size >= MAX_CACHE_SIZE) {
       const firstKey = jobTitleCache.keys().next().value
       if (firstKey) jobTitleCache.delete(firstKey)
     }
-    jobTitleCache.set(cacheKey, isRelevant)
+    jobTitleCache.set(cacheKey, result)
 
-    return isRelevant
+    return result
   } catch (error) {
     console.error('Ollama isJobTitleRelevant error:', error)
     // On error, default to checking the job — don't skip it
-    return true
+    return { relevant: true, score: -1 }
   }
 }
 
@@ -98,19 +100,13 @@ const DESCRIPTION_THRESHOLD = 0.5
 export async function isJobRelevant(
   jobDescription: string,
   userProfileEmbedding: number[]
-): Promise<boolean> {
+): Promise<{ relevant: boolean; score: number }> {
   try {
-    // Truncate job description if it's too long to avoid context limits (though embeddings handle large contexts well,
-    // performance might degrade or it might capture too much noise).
-    // For embeddings, sending the first 2000-3000 chars is usually enough to capture the core of the job.
-
-    // For embeddings, sending the first 2000-3000 chars is usually enough to capture the core of the job.
-
     const descriptionEmbedding = await getEmbedding(jobDescription)
 
     if (descriptionEmbedding.length === 0 || userProfileEmbedding.length === 0) {
       console.warn('[AI Job Check] Failed to get embeddings, defaulting to TRUE')
-      return true
+      return { relevant: true, score: -1 }
     }
 
     const similarity = cosineSimilarity(descriptionEmbedding, userProfileEmbedding)
@@ -120,11 +116,11 @@ export async function isJobRelevant(
       `[AI Job Check] Similarity: ${similarity.toFixed(4)} -> ${isRelevant ? 'GOOD FIT' : 'NOT A FIT'}`
     )
 
-    return isRelevant
+    return { relevant: isRelevant, score: Math.round(similarity * 100) }
   } catch (error) {
     console.error('Ollama isJobRelevant error:', error)
     // On error, default to checking the job — don't skip it
-    return true
+    return { relevant: true, score: -1 }
   }
 }
 
