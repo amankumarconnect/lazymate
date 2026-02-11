@@ -368,7 +368,10 @@ ipcMain.handle('start-automation', async () => {
 
 ipcMain.on('stop-automation', () => {
   automationRunning = false
-  mainWindow.webContents.send('log', { message: 'Stopping automation and closing app...', type: 'info' })
+  mainWindow.webContents.send('log', {
+    message: 'Stopping automation and closing app...',
+    type: 'info'
+  })
   setTimeout(() => {
     app.quit()
   }, 1000)
