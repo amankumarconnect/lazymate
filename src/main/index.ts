@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, BrowserView } from 'electron'
+import { app, BrowserWindow, ipcMain, BrowserView, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -17,9 +17,11 @@ let automationRunning = false
 interface UserData {
   text: string
   embedding: number[]
+  hasResume: boolean
 }
 
 const userDataPath = join(app.getPath('userData'), 'user-data.json')
+const resumePath = join(app.getPath('userData'), 'resume.pdf')
 let userProfile: UserData | null = null
 
 // Load on startup
@@ -380,41 +382,55 @@ ipcMain.on('stop-automation', () => {
   }, 1000)
 })
 
-ipcMain.handle('parse-resume', async (_event, buffer: ArrayBuffer) => {
+ipcMain.handle('save-resume', async (_event, buffer: ArrayBuffer) => {
   try {
+    // 1. Save the file locally
+    writeFileSync(resumePath, Buffer.from(buffer))
+
+    // 2. Parse PDF to text
     const parser = new PDFParse({ data: Buffer.from(buffer) })
     const result = await parser.getText()
     await parser.destroy()
-    return result.text
-  } catch (error) {
-    console.error('Error parsing PDF:', error)
-    throw new Error('Failed to parse PDF')
-  }
-})
+    const text = result.text
 
-ipcMain.handle('save-user-profile', async (_event, text: string) => {
-  try {
-    // 1. Generate the "Target Job Persona" from the resume
+    // 3. Generate the "Target Job Persona" from the resume
     console.log('Generating Target Job Persona from resume...')
     const persona = await generateJobPersona(text)
     console.log('Generated Persona:', persona)
 
-    // 2. Generate embedding from the PERSONA (not the raw resume)
+    // 4. Generate embedding from the PERSONA (not the raw resume)
     console.log('Generating embedding from persona...')
     const embedding = await getEmbedding(persona)
 
-    // 3. Save the ORIGINAL text (for cover letters) and the NEW embedding
-    userProfile = { text, embedding }
+    // 5. Save the ORIGINAL text (for cover letters) and the NEW embedding
+    userProfile = { text, embedding, hasResume: true }
     writeFileSync(userDataPath, JSON.stringify(userProfile))
+    
     return true
   } catch (error) {
-    console.error('Error saving user profile:', error)
-    throw error
+    console.error('Error saving resume:', error)
+    throw new Error('Failed to save resume')
+  }
+})
+
+ipcMain.handle('download-resume', async () => {
+  if (!existsSync(resumePath)) {
+    throw new Error('No resume found to download')
+  }
+
+  const { filePath } = await dialog.showSaveDialog({
+    title: 'Download Resume',
+    defaultPath: 'resume.pdf',
+    filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
+  })
+
+  if (filePath) {
+    writeFileSync(filePath, readFileSync(resumePath))
   }
 })
 
 ipcMain.handle('get-user-profile', async () => {
-  return userProfile?.text || null
+  return userProfile ? { hasResume: userProfile.hasResume } : null
 })
 
 app.whenReady().then(() => {

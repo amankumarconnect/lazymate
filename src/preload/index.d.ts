@@ -4,7 +4,12 @@ declare global {
   interface Window {
     electron: ElectronAPI
     api: {
-      runAutomation: (url: string, script: string) => Promise<{ success: boolean; error?: string }>
+      startAutomation: (data: { userProfile: string }) => Promise<void>
+      stopAutomation: () => void
+      saveResume: (buffer: ArrayBuffer) => Promise<boolean>
+      downloadResume: () => Promise<void>
+      onLog: (callback: (msg: unknown) => void) => () => void
+      getUserProfile: () => Promise<{ hasResume: boolean } | null>
     }
   }
 }

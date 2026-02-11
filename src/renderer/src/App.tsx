@@ -5,7 +5,7 @@ import { ProfileEditView } from './components/dashboard/ProfileEditView'
 import { ProfileReadView } from './components/dashboard/ProfileReadView'
 
 function App(): JSX.Element {
-  const [profile, setProfile] = useState('')
+  const [hasResume, setHasResume] = useState(false)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [isRunning, setIsRunning] = useState(false)
   const [isParsing, setIsParsing] = useState(false)
@@ -22,8 +22,8 @@ function App(): JSX.Element {
       try {
         // @ts-ignore (window.api is exposed by preload)
         const savedProfile = await window.api.getUserProfile()
-        if (savedProfile) {
-          setProfile(savedProfile)
+        if (savedProfile && savedProfile.hasResume) {
+          setHasResume(true)
         } else {
           setEditMode(true) // No profile, go to edit mode
         }
@@ -52,18 +52,6 @@ function App(): JSX.Element {
     window.api.startAutomation()
   }
 
-  const handleSave = async (): Promise<void> => {
-    try {
-      // @ts-ignore (window.api is exposed by preload)
-      await window.api.saveUserProfile(profile)
-      setEditMode(false)
-      addLog({ message: 'Profile saved!', type: 'success' })
-    } catch (error) {
-      console.error('Failed to save profile:', error)
-      addLog({ message: 'Error saving profile', type: 'error' })
-    }
-  }
-
   const handleFileUpload = async (file: File): Promise<void> => {
     setIsParsing(true)
     addLog({ message: 'Uploading resume...', type: 'info' })
@@ -71,14 +59,11 @@ function App(): JSX.Element {
     try {
       const buffer = await file.arrayBuffer()
       // @ts-ignore (window.api is exposed by preload)
-      const text = await window.api.parseResume(buffer)
-      setProfile(text)
-      addLog({ message: 'Resume parsed successfully!', type: 'success' })
-      // Auto-save after parse
       // @ts-ignore (window.api is exposed by preload)
-      await window.api.saveUserProfile(text)
+      await window.api.saveResume(buffer)
+      setHasResume(true)
+      addLog({ message: 'Resume uploaded and parsed!', type: 'success' })
       setEditMode(false)
-      addLog({ message: 'Profile saved automatically!', type: 'success' })
     } catch (error) {
       console.error(error)
       addLog({ message: 'Error parsing resume', type: 'error' })
@@ -103,17 +88,15 @@ function App(): JSX.Element {
           <div className="text-center text-sm text-muted-foreground">Loading profile...</div>
         ) : editMode ? (
           <ProfileEditView
-            profile={profile}
-            setProfile={setProfile}
-            onSave={handleSave}
-            onCancel={profile ? () => setEditMode(false) : undefined}
+            hasResume={hasResume}
+            onCancel={hasResume ? () => setEditMode(false) : undefined}
             onFileUpload={handleFileUpload}
             isParsing={isParsing}
             isRunning={isRunning}
           />
         ) : (
           <ProfileReadView
-            profile={profile}
+            hasResume={hasResume}
             onEdit={() => setEditMode(true)}
             isRunning={isRunning}
             onStart={handleStart}

@@ -1,12 +1,10 @@
 import { useRef, JSX } from 'react'
 import { Button } from '../ui/button'
-import { Textarea } from '../ui/textarea'
+
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 
 interface ProfileEditViewProps {
-  profile: string
-  setProfile: (value: string) => void
-  onSave: () => void
+  hasResume: boolean
   onCancel?: () => void
   onFileUpload: (file: File) => Promise<void>
   isParsing: boolean
@@ -14,9 +12,7 @@ interface ProfileEditViewProps {
 }
 
 export function ProfileEditView({
-  profile,
-  setProfile,
-  onSave,
+  hasResume,
   onCancel,
   onFileUpload,
   isParsing,
@@ -36,7 +32,16 @@ export function ProfileEditView({
   return (
     <Card className="flex-shrink-0">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Your Profile</CardTitle>
+        <CardTitle className="text-sm">
+          {hasResume ? 'Replace Resume' : 'Upload Resume'}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="text-xs text-muted-foreground mb-4">
+          Upload your resume (PDF only). We will automatically parse it to generate your job
+          persona.
+        </div>
+
         <input
           type="file"
           ref={fileInputRef}
@@ -44,25 +49,16 @@ export function ProfileEditView({
           accept=".pdf"
           onChange={handleFileChange}
         />
+
         <Button
           variant="outline"
-          size="sm"
+          className="w-full"
           onClick={() => fileInputRef.current?.click()}
           disabled={isParsing || isRunning}
         >
-          {isParsing ? 'Parsing...' : 'Upload PDF Resume'}
+          {isParsing ? 'Parsing...' : 'Select PDF Resume'}
         </Button>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Textarea
-          placeholder="Describe yourself..."
-          className="min-h-[150px] max-h-[300px] overflow-y-auto"
-          value={profile}
-          onChange={(e) => setProfile(e.target.value)}
-        />
-        <Button className="w-full" onClick={onSave} disabled={!profile}>
-          Save Profile
-        </Button>
+
         {onCancel && (
           <Button variant="ghost" size="sm" className="w-full mt-2" onClick={onCancel}>
             Cancel
