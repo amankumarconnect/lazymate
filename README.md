@@ -1,34 +1,53 @@
 # mini-tsenta
 
-An Electron application with React and TypeScript
+Automated job application bot for [WorkAtAStartup.com](https://www.workatastartup.com/). Parses your resume, uses local LLMs to match relevant jobs via semantic similarity, and auto-fills applications with AI-generated cover letters.
 
-## Recommended IDE Setup
+Currently in testing mode -- applications are filled but not submitted.
 
-- [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+## Tech Stack
 
-## Project Setup
+- Electron + React + TypeScript (desktop app)
+- Tailwind CSS + Shadcn/ui (styling)
+- Playwright Core (browser automation via CDP)
+- Ollama (local LLM inference)
+- pdf-parse (resume PDF extraction)
 
-### Install
+## Prerequisites
 
-```bash
-$ npm install
+- Node.js
+- [Ollama](https://ollama.com/) running locally
+- Pull required models:
+
+```
+ollama pull gemma3:4b
+ollama pull qwen3-embedding:0.6b
 ```
 
-### Development
+## Setup
 
-```bash
-$ npm run dev
+```
+npm install
+cp .env.example .env
+npm run dev
 ```
 
-### Build
+## How It Works
 
-```bash
-# For windows
-$ npm run build:win
+1. Upload your resume (PDF)
+2. AI generates a "target job persona" and embeddings from your resume
+3. Click start -- a browser opens WorkAtAStartup.com
+4. For each company/job listing:
+   - Job title is checked against your profile using embedding similarity
+   - If title matches, full description is evaluated
+   - If relevant, a cover letter is generated and filled into the application form
+5. Real-time activity log shows match scores, skips, and status
 
-# For macOS
-$ npm run build:mac
+Pause/resume is supported mid-automation.
 
-# For Linux
-$ npm run build:linux
+## Build
+
+```
+npm run build:win     # Windows
+npm run build:mac     # macOS
+npm run build:linux   # Linux
 ```
