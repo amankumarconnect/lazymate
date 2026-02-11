@@ -1,7 +1,7 @@
 import { Ollama } from 'ollama'
 
 const ollama = new Ollama()
-const MODEL_GENERATION = 'qwen2.5:3b'
+const MODEL_GENERATION = 'gemma3:4b'
 const MODEL_EMBEDDING = 'qwen3-embedding:0.6b'
 
 // Simple in-memory cache for job titles to save inference time
