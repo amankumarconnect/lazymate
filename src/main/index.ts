@@ -406,6 +406,6 @@ ipcMain.handle('get-user-profile', async () => {
 })
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.lazymate')
+  electronApp.setAppUserModelId('com.mini-tsenta')
   createWindow()
 })
