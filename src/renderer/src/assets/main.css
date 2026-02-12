@@ -1,122 +1,668 @@
+/* ==========================================================================
+   MAIN CSS FILE
+   ==========================================================================
+   This is the main stylesheet for the application. It sets up:
+   1. Tailwind CSS (a utility-first CSS framework) and its animation plugin.
+   2. A dark mode toggling strategy.
+   3. A full design-token system using CSS custom properties (variables) so
+      that colors, border radii, and other visual values can be swapped
+      between a light theme and a dark theme in one place.
+   4. A bridge between those CSS variables and Tailwind's own theme system
+      so you can use classes like "bg-primary" or "text-foreground" in HTML.
+   5. Global base styles applied to every element and the <body>.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   SECTION 1 -- IMPORTS
+   -------------------------------------------------------------------------- */
+
+/*
+ * @import 'tailwindcss';
+ *
+ * This single import pulls in the entire Tailwind CSS framework (v4+).
+ * Tailwind CSS is a "utility-first" CSS framework, which means instead of
+ * writing custom CSS classes like ".btn-blue { background: blue; }", you
+ * compose styles directly in your HTML using small, single-purpose utility
+ * classes like "bg-blue-500 text-white p-4 rounded".
+ *
+ * Under the hood this import loads Tailwind's base/reset styles, all of
+ * its utility classes, and its component classes. In Tailwind v4 this
+ * replaces the older @tailwind directives (base, components, utilities)
+ * that were used in v3.
+ */
 @import 'tailwindcss';
+
+/*
+ * @import 'tw-animate-css';
+ *
+ * This imports the "tw-animate-css" plugin, which is a Tailwind-compatible
+ * animation library. It provides ready-to-use CSS animation utility classes
+ * (e.g., fade-in, slide-up, zoom-in, bounce, etc.) that you can apply
+ * directly in your HTML markup. Think of it as a collection of pre-built
+ * animations you can drop onto any element without writing @keyframes
+ * yourself.
+ */
 @import 'tw-animate-css';
 
+/* --------------------------------------------------------------------------
+   SECTION 2 -- DARK MODE VARIANT
+   -------------------------------------------------------------------------- */
+
+/*
+ * @custom-variant dark (&:is(.dark *));
+ *
+ * This line tells Tailwind how to activate "dark mode" utility classes
+ * (like "dark:bg-black", "dark:text-white", etc.).
+ *
+ * Breaking it down:
+ *   - @custom-variant  -- a Tailwind v4 directive that lets you define a
+ *                          custom variant (a conditional wrapper for styles).
+ *   - dark             -- the name of the variant. You use it as a prefix
+ *                          in class names, e.g. "dark:bg-gray-900".
+ *   - (&:is(.dark *))  -- the CSS selector condition. "&" represents the
+ *                          current element. ":is(.dark *)" matches any
+ *                          element that is a descendant of an element with
+ *                          the class "dark".
+ *
+ * How it works in practice:
+ *   When you add the CSS class "dark" to a parent element (usually <html>
+ *   or <body>), every descendant element will match the ".dark *" selector,
+ *   which causes all "dark:" prefixed utilities to take effect. Removing
+ *   the "dark" class switches back to the light theme. This is called
+ *   "class-based" dark mode (as opposed to the OS-preference-based
+ *   approach using @media (prefers-color-scheme: dark)).
+ */
 @custom-variant dark (&:is(.dark *));
 
+/* --------------------------------------------------------------------------
+   SECTION 3 -- LIGHT THEME CSS CUSTOM PROPERTIES (VARIABLES)
+   -------------------------------------------------------------------------- */
+
+/*
+ * :root { ... }
+ *
+ * The :root pseudo-class matches the root element of the document, which
+ * in HTML is the <html> element. Variables declared here are available
+ * globally -- every element in the page can read them.
+ *
+ * This block defines the LIGHT THEME color palette and other design tokens
+ * using CSS custom properties (also called CSS variables). A CSS custom
+ * property always starts with two dashes, e.g. --background.
+ *
+ * You reference a custom property with the var() function:
+ *   color: var(--foreground);
+ *
+ * ---- About the oklch() color format ----
+ *
+ * Most colors below use the oklch() function. oklch stands for:
+ *   O  = Oklab  (a perceptually uniform color model)
+ *   K  = (part of the Oklab name)
+ *   L  = Lightness  -- ranges from 0 (black) to 1 (white)
+ *   C  = Chroma     -- ranges from 0 (gray / no color) upward (more vivid)
+ *   H  = Hue        -- the color angle in degrees (0-360), like a color wheel
+ *
+ * Example:  oklch(0.645 0.246 16.439)
+ *   - Lightness 0.645  -- medium brightness
+ *   - Chroma   0.246   -- fairly vivid / saturated
+ *   - Hue      16.439  -- reddish-orange on the color wheel
+ *
+ * When Chroma is 0 the Hue is irrelevant and the result is a neutral gray
+ * whose brightness is determined solely by the Lightness value.
+ *   oklch(1 0 0)     = pure white  (L=1, no color)
+ *   oklch(0 0 0)     = pure black  (L=0, no color)
+ *   oklch(0.5 0 0)   = medium gray
+ *
+ * Why oklch?  It is "perceptually uniform", meaning equal numeric steps
+ * produce equal perceived differences in brightness or color -- unlike
+ * hex (#fff) or hsl() where perceived brightness can be uneven.
+ */
 :root {
+  /* --background: The main page / app background color.
+     oklch(1 0 0) = pure white. */
   --background: oklch(1 0 0);
+
+  /* --foreground: The default text color used on top of --background.
+     oklch(0.145 0 0) = very dark gray, almost black. */
   --foreground: oklch(0.145 0 0);
+
+  /* --card: Background color for "card" components (elevated panels/boxes).
+     oklch(1 0 0) = white, same as the page background in light mode. */
   --card: oklch(1 0 0);
+
+  /* --card-foreground: Text color inside card components.
+     oklch(0.145 0 0) = very dark gray, matching --foreground. */
   --card-foreground: oklch(0.145 0 0);
+
+  /* --popover: Background color for popover / dropdown components.
+     oklch(1 0 0) = white. */
   --popover: oklch(1 0 0);
+
+  /* --popover-foreground: Text color inside popovers / dropdowns.
+     oklch(0.145 0 0) = very dark gray. */
   --popover-foreground: oklch(0.145 0 0);
+
+  /* --primary: The primary brand / action color (buttons, links, etc.).
+     oklch(0.205 0 0) = very dark gray, nearly black. */
   --primary: oklch(0.205 0 0);
+
+  /* --primary-foreground: Text color used on top of --primary backgrounds.
+     oklch(0.985 0 0) = near-white, ensuring readable contrast. */
   --primary-foreground: oklch(0.985 0 0);
+
+  /* --secondary: A secondary accent color for less prominent UI elements.
+     oklch(0.97 0 0) = very light gray, just off-white. */
   --secondary: oklch(0.97 0 0);
+
+  /* --secondary-foreground: Text color on --secondary backgrounds.
+     oklch(0.205 0 0) = very dark gray. */
   --secondary-foreground: oklch(0.205 0 0);
+
+  /* --muted: Background color for muted / subdued UI areas (e.g., disabled
+     states, secondary sections).
+     oklch(0.97 0 0) = very light gray. */
   --muted: oklch(0.97 0 0);
+
+  /* --muted-foreground: Text color for muted content (e.g., placeholder
+     text, captions, hints). Lighter than normal foreground to convey
+     lower importance.
+     oklch(0.556 0 0) = medium gray. */
   --muted-foreground: oklch(0.556 0 0);
+
+  /* --accent: Background color for accented interactive elements
+     (e.g., hovered menu items, selected tabs).
+     oklch(0.97 0 0) = very light gray. */
   --accent: oklch(0.97 0 0);
+
+  /* --accent-foreground: Text color on --accent backgrounds.
+     oklch(0.205 0 0) = very dark gray. */
   --accent-foreground: oklch(0.205 0 0);
+
+  /* --destructive: Color for destructive / dangerous actions (delete
+     buttons, error states). This is a RED color.
+     oklch(0.577 0.245 27.325) = medium-brightness, vivid red.
+     Chroma 0.245 = very saturated; Hue 27 = red-orange. */
   --destructive: oklch(0.577 0.245 27.325);
+
+  /* --destructive-foreground: Text color on --destructive backgrounds.
+     Same red value here; in some design systems this differs to ensure
+     contrast. In light mode both are the same red.
+     oklch(0.577 0.245 27.325) = same vivid red as --destructive. */
   --destructive-foreground: oklch(0.577 0.245 27.325);
+
+  /* --border: Default border color for dividers, input outlines, etc.
+     oklch(0.922 0 0) = light gray. */
   --border: oklch(0.922 0 0);
+
+  /* --input: Border / outline color specifically for form input fields.
+     oklch(0.922 0 0) = light gray, matching --border. */
   --input: oklch(0.922 0 0);
+
+  /* --ring: Color for focus rings (the outline that appears when an
+     element receives keyboard focus, used for accessibility).
+     oklch(0.708 0 0) = medium-light gray. */
   --ring: oklch(0.708 0 0);
+
+  /* --chart-1 through --chart-5: A palette of five distinct colors
+     used for data visualizations (charts, graphs).
+     Each uses a different Hue to make data series visually distinct. */
+
+  /* --chart-1: Warm orange.
+     oklch(0.646 0.222 41.116) -- Hue ~41 = orange. */
   --chart-1: oklch(0.646 0.222 41.116);
+
+  /* --chart-2: Teal / cyan.
+     oklch(0.6 0.118 184.704) -- Hue ~185 = teal. */
   --chart-2: oklch(0.6 0.118 184.704);
+
+  /* --chart-3: Dark blue.
+     oklch(0.398 0.07 227.392) -- Hue ~227 = blue, low lightness. */
   --chart-3: oklch(0.398 0.07 227.392);
+
+  /* --chart-4: Yellow-green / gold.
+     oklch(0.828 0.189 84.429) -- Hue ~84 = yellow-green, bright. */
   --chart-4: oklch(0.828 0.189 84.429);
+
+  /* --chart-5: Warm yellow-orange.
+     oklch(0.769 0.188 70.08) -- Hue ~70 = yellow-orange. */
   --chart-5: oklch(0.769 0.188 70.08);
+
+  /* --radius: The base border-radius value used to round corners on
+     UI elements (buttons, cards, inputs, etc.). All other radius values
+     (sm, md, lg, xl) are calculated relative to this base.
+     0.625rem = 10px at the default 16px font size. */
   --radius: 0.625rem;
+
+  /* ---------- Sidebar-specific variables ----------
+     These variables control the look of a sidebar navigation component.
+     Having separate tokens lets the sidebar be styled independently from
+     the rest of the page. */
+
+  /* --sidebar: Background color of the sidebar panel.
+     oklch(0.985 0 0) = near-white, very slightly darker than pure white. */
   --sidebar: oklch(0.985 0 0);
+
+  /* --sidebar-foreground: Default text color inside the sidebar.
+     oklch(0.145 0 0) = very dark gray. */
   --sidebar-foreground: oklch(0.145 0 0);
+
+  /* --sidebar-primary: The primary action color inside the sidebar
+     (active link highlight, selected item).
+     oklch(0.205 0 0) = very dark gray. */
   --sidebar-primary: oklch(0.205 0 0);
+
+  /* --sidebar-primary-foreground: Text on sidebar primary-colored elements.
+     oklch(0.985 0 0) = near-white. */
   --sidebar-primary-foreground: oklch(0.985 0 0);
+
+  /* --sidebar-accent: Accent / hover background inside the sidebar.
+     oklch(0.97 0 0) = very light gray. */
   --sidebar-accent: oklch(0.97 0 0);
+
+  /* --sidebar-accent-foreground: Text on sidebar accent backgrounds.
+     oklch(0.205 0 0) = very dark gray. */
   --sidebar-accent-foreground: oklch(0.205 0 0);
+
+  /* --sidebar-border: Border / divider color within the sidebar.
+     oklch(0.922 0 0) = light gray. */
   --sidebar-border: oklch(0.922 0 0);
+
+  /* --sidebar-ring: Focus ring color for focusable sidebar elements.
+     oklch(0.708 0 0) = medium-light gray. */
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* --------------------------------------------------------------------------
+   SECTION 4 -- DARK THEME OVERRIDES
+   -------------------------------------------------------------------------- */
+
+/*
+ * .dark { ... }
+ *
+ * This block re-declares the same CSS custom properties but with values
+ * appropriate for a DARK theme. Because these declarations live under the
+ * ".dark" class selector, they only take effect when an ancestor element
+ * (typically <html> or <body>) has the class "dark" applied to it.
+ *
+ * CSS specificity rules mean that when ".dark" is present, these values
+ * override the ones set in :root above. When the ".dark" class is removed,
+ * the browser falls back to the :root values (light theme). This is
+ * exactly how the class-based dark mode toggle works.
+ *
+ * The overall pattern is: light backgrounds become dark, light text becomes
+ * light, and accent colors shift to variants that look good on dark
+ * backgrounds.
+ */
 .dark {
+  /* --background: Page background in dark mode.
+     oklch(0.145 0 0) = very dark gray, almost black. */
   --background: oklch(0.145 0 0);
+
+  /* --foreground: Default text color in dark mode.
+     oklch(0.985 0 0) = near-white. */
   --foreground: oklch(0.985 0 0);
+
+  /* --card: Card background in dark mode.
+     oklch(0.145 0 0) = very dark gray, matching page background. */
   --card: oklch(0.145 0 0);
+
+  /* --card-foreground: Card text in dark mode.
+     oklch(0.985 0 0) = near-white. */
   --card-foreground: oklch(0.985 0 0);
+
+  /* --popover: Popover/dropdown background in dark mode.
+     oklch(0.145 0 0) = very dark gray. */
   --popover: oklch(0.145 0 0);
+
+  /* --popover-foreground: Popover text in dark mode.
+     oklch(0.985 0 0) = near-white. */
   --popover-foreground: oklch(0.985 0 0);
+
+  /* --primary: Primary action color in dark mode (inverted from light).
+     oklch(0.985 0 0) = near-white -- the button is now light on dark bg. */
   --primary: oklch(0.985 0 0);
+
+  /* --primary-foreground: Text on primary in dark mode.
+     oklch(0.205 0 0) = dark text on a light primary button. */
   --primary-foreground: oklch(0.205 0 0);
+
+  /* --secondary: Secondary UI element background in dark mode.
+     oklch(0.269 0 0) = dark gray, slightly lighter than background. */
   --secondary: oklch(0.269 0 0);
+
+  /* --secondary-foreground: Text on secondary backgrounds in dark mode.
+     oklch(0.985 0 0) = near-white. */
   --secondary-foreground: oklch(0.985 0 0);
+
+  /* --muted: Muted / subdued area background in dark mode.
+     oklch(0.269 0 0) = dark gray. */
   --muted: oklch(0.269 0 0);
+
+  /* --muted-foreground: Muted text in dark mode (placeholder, caption).
+     oklch(0.708 0 0) = medium gray -- lighter than dark bg for readability. */
   --muted-foreground: oklch(0.708 0 0);
+
+  /* --accent: Accent / hover background in dark mode.
+     oklch(0.269 0 0) = dark gray. */
   --accent: oklch(0.269 0 0);
+
+  /* --accent-foreground: Text on accent backgrounds in dark mode.
+     oklch(0.985 0 0) = near-white. */
   --accent-foreground: oklch(0.985 0 0);
+
+  /* --destructive: Destructive action color in dark mode -- a darker red
+     so it blends with dark backgrounds without being too harsh.
+     oklch(0.396 0.141 25.723) = dark, muted red. */
   --destructive: oklch(0.396 0.141 25.723);
+
+  /* --destructive-foreground: Text/icon color for destructive elements in
+     dark mode -- a brighter red so it's readable against dark surfaces.
+     oklch(0.637 0.237 25.331) = brighter, vivid red. */
   --destructive-foreground: oklch(0.637 0.237 25.331);
+
+  /* --border: Border / divider color in dark mode.
+     oklch(0.269 0 0) = dark gray. */
   --border: oklch(0.269 0 0);
+
+  /* --input: Input field border color in dark mode.
+     oklch(0.269 0 0) = dark gray. */
   --input: oklch(0.269 0 0);
+
+  /* --ring: Focus ring color in dark mode.
+     oklch(0.439 0 0) = medium-dark gray. */
   --ring: oklch(0.439 0 0);
+
+  /* --chart-1 through --chart-5: Chart colors re-tuned for dark backgrounds.
+     Each color is adjusted so it remains legible and vibrant against a
+     dark surface. The hues shift to provide good contrast in dark mode. */
+
+  /* --chart-1: Vivid blue.
+     oklch(0.488 0.243 264.376) -- Hue ~264 = blue-violet. */
   --chart-1: oklch(0.488 0.243 264.376);
+
+  /* --chart-2: Bright teal / green.
+     oklch(0.696 0.17 162.48) -- Hue ~162 = teal-green. */
   --chart-2: oklch(0.696 0.17 162.48);
+
+  /* --chart-3: Warm yellow-orange (was dark blue in light mode).
+     oklch(0.769 0.188 70.08) -- Hue ~70 = yellow-orange. */
   --chart-3: oklch(0.769 0.188 70.08);
+
+  /* --chart-4: Purple / violet.
+     oklch(0.627 0.265 303.9) -- Hue ~304 = purple-magenta. */
   --chart-4: oklch(0.627 0.265 303.9);
+
+  /* --chart-5: Red / coral.
+     oklch(0.645 0.246 16.439) -- Hue ~16 = red. */
   --chart-5: oklch(0.645 0.246 16.439);
+
+  /* ---------- Sidebar dark mode overrides ---------- */
+
+  /* --sidebar: Sidebar background in dark mode.
+     oklch(0.205 0 0) = darker than the page bg for visual separation. */
   --sidebar: oklch(0.205 0 0);
+
+  /* --sidebar-foreground: Sidebar text in dark mode.
+     oklch(0.985 0 0) = near-white. */
   --sidebar-foreground: oklch(0.985 0 0);
+
+  /* --sidebar-primary: Sidebar primary accent in dark mode -- a vivid blue
+     to make the active/selected item stand out on the dark sidebar.
+     oklch(0.488 0.243 264.376) = saturated blue. */
   --sidebar-primary: oklch(0.488 0.243 264.376);
+
+  /* --sidebar-primary-foreground: Text on sidebar primary elements.
+     oklch(0.985 0 0) = near-white. */
   --sidebar-primary-foreground: oklch(0.985 0 0);
+
+  /* --sidebar-accent: Sidebar hover / accent bg in dark mode.
+     oklch(0.269 0 0) = dark gray. */
   --sidebar-accent: oklch(0.269 0 0);
+
+  /* --sidebar-accent-foreground: Text on sidebar accent backgrounds.
+     oklch(0.985 0 0) = near-white. */
   --sidebar-accent-foreground: oklch(0.985 0 0);
+
+  /* --sidebar-border: Sidebar divider/border color in dark mode.
+     oklch(0.269 0 0) = dark gray. */
   --sidebar-border: oklch(0.269 0 0);
+
+  /* --sidebar-ring: Sidebar focus ring in dark mode.
+     oklch(0.439 0 0) = medium-dark gray. */
   --sidebar-ring: oklch(0.439 0 0);
 }
 
+/* --------------------------------------------------------------------------
+   SECTION 5 -- TAILWIND THEME BRIDGE (@theme inline)
+   -------------------------------------------------------------------------- */
+
+/*
+ * @theme inline { ... }
+ *
+ * This is a Tailwind CSS v4 directive that registers design tokens
+ * directly into Tailwind's theme system. It creates a bridge between the
+ * CSS custom properties defined in :root / .dark above and the utility
+ * classes that Tailwind generates.
+ *
+ * WHY THIS IS NEEDED:
+ *   Tailwind generates utility classes based on its theme configuration.
+ *   For example, the class "bg-primary" works because Tailwind knows there
+ *   is a color called "primary" in its theme. Without this @theme block,
+ *   Tailwind would not know about our custom CSS variables, so classes
+ *   like "bg-primary" or "text-muted-foreground" would not exist.
+ *
+ * HOW IT WORKS:
+ *   Each line maps a Tailwind theme token (left side) to a CSS variable
+ *   (right side) using var(). The naming convention is:
+ *     --color-<name>   -->  makes "bg-<name>", "text-<name>", etc. available
+ *     --radius-<size>  -->  makes "rounded-<size>" available
+ *
+ * THE "inline" KEYWORD:
+ *   The "inline" keyword tells Tailwind NOT to generate extra custom
+ *   properties for these values in the compiled output. Instead, Tailwind
+ *   will inline the var() references directly wherever they are used.
+ *   This avoids duplicate custom properties and keeps the output clean,
+ *   since the actual values are already declared in :root and .dark.
+ */
 @theme inline {
+  /* --color-background: Registers "background" as a Tailwind color.
+     Enables classes: bg-background, text-background, border-background, etc.
+     Reads its value from the --background CSS variable. */
   --color-background: var(--background);
+
+  /* --color-foreground: Registers "foreground" as a Tailwind color.
+     Enables classes: text-foreground, bg-foreground, etc. */
   --color-foreground: var(--foreground);
+
+  /* --color-card: Registers "card" as a Tailwind color.
+     Enables classes: bg-card, text-card, etc. */
   --color-card: var(--card);
+
+  /* --color-card-foreground: Registers "card-foreground" as a Tailwind color.
+     Enables classes: text-card-foreground, etc. */
   --color-card-foreground: var(--card-foreground);
+
+  /* --color-popover: Registers "popover" as a Tailwind color.
+     Enables classes: bg-popover, etc. */
   --color-popover: var(--popover);
+
+  /* --color-popover-foreground: Registers "popover-foreground" as color.
+     Enables classes: text-popover-foreground, etc. */
   --color-popover-foreground: var(--popover-foreground);
+
+  /* --color-primary: Registers "primary" as a Tailwind color.
+     Enables classes: bg-primary, text-primary, border-primary, etc. */
   --color-primary: var(--primary);
+
+  /* --color-primary-foreground: Registers "primary-foreground" as color.
+     Enables classes: text-primary-foreground, etc. */
   --color-primary-foreground: var(--primary-foreground);
+
+  /* --color-secondary: Registers "secondary" as a Tailwind color.
+     Enables classes: bg-secondary, text-secondary, etc. */
   --color-secondary: var(--secondary);
+
+  /* --color-secondary-foreground: Registers "secondary-foreground" as color.
+     Enables classes: text-secondary-foreground, etc. */
   --color-secondary-foreground: var(--secondary-foreground);
+
+  /* --color-muted: Registers "muted" as a Tailwind color.
+     Enables classes: bg-muted, text-muted, etc. */
   --color-muted: var(--muted);
+
+  /* --color-muted-foreground: Registers "muted-foreground" as color.
+     Enables classes: text-muted-foreground, etc. */
   --color-muted-foreground: var(--muted-foreground);
+
+  /* --color-accent: Registers "accent" as a Tailwind color.
+     Enables classes: bg-accent, text-accent, etc. */
   --color-accent: var(--accent);
+
+  /* --color-accent-foreground: Registers "accent-foreground" as color.
+     Enables classes: text-accent-foreground, etc. */
   --color-accent-foreground: var(--accent-foreground);
+
+  /* --color-destructive: Registers "destructive" as a Tailwind color.
+     Enables classes: bg-destructive, text-destructive, etc. */
   --color-destructive: var(--destructive);
+
+  /* --color-destructive-foreground: Registers "destructive-foreground".
+     Enables classes: text-destructive-foreground, etc. */
   --color-destructive-foreground: var(--destructive-foreground);
+
+  /* --color-border: Registers "border" as a Tailwind color.
+     Enables classes: border-border (sets border color), etc. */
   --color-border: var(--border);
+
+  /* --color-input: Registers "input" as a Tailwind color.
+     Enables classes: border-input, bg-input, etc. */
   --color-input: var(--input);
+
+  /* --color-ring: Registers "ring" as a Tailwind color.
+     Enables classes: ring-ring (sets focus ring color), etc. */
   --color-ring: var(--ring);
+
+  /* --color-chart-1 through --color-chart-5: Register 5 chart colors.
+     Enables classes: bg-chart-1, text-chart-2, fill-chart-3, etc.
+     Useful for coloring chart elements in data visualization components. */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+
+  /* --radius-sm, --radius-md, --radius-lg, --radius-xl:
+     Register four border-radius sizes into Tailwind's theme.
+     Enables classes: rounded-sm, rounded-md, rounded-lg, rounded-xl.
+
+     They are all calculated relative to the base --radius variable
+     (0.625rem / 10px), so changing --radius in :root automatically
+     scales all four:
+       --radius-sm  = 0.625rem - 4px  = ~6px   (small corners)
+       --radius-md  = 0.625rem - 2px  = ~8px   (medium corners)
+       --radius-lg  = 0.625rem        = 10px   (large corners, the base)
+       --radius-xl  = 0.625rem + 4px  = ~14px  (extra-large corners)
+  */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* --color-sidebar and related tokens: Register sidebar-specific colors
+     into Tailwind's theme so that sidebar components can use utility
+     classes like bg-sidebar, text-sidebar-foreground,
+     bg-sidebar-primary, border-sidebar-border, etc.
+
+     Keeping sidebar tokens separate from the main tokens allows the
+     sidebar to have its own visual identity (e.g., a slightly different
+     background shade) independent of the rest of the page. */
+
+  /* --color-sidebar: Sidebar background color token. */
   --color-sidebar: var(--sidebar);
+
+  /* --color-sidebar-foreground: Sidebar default text color token. */
   --color-sidebar-foreground: var(--sidebar-foreground);
+
+  /* --color-sidebar-primary: Sidebar primary/active item color token. */
   --color-sidebar-primary: var(--sidebar-primary);
+
+  /* --color-sidebar-primary-foreground: Text on sidebar primary elements. */
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+
+  /* --color-sidebar-accent: Sidebar hover/accent background color token. */
   --color-sidebar-accent: var(--sidebar-accent);
+
+  /* --color-sidebar-accent-foreground: Text on sidebar accent backgrounds. */
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+
+  /* --color-sidebar-border: Sidebar border/divider color token. */
   --color-sidebar-border: var(--sidebar-border);
+
+  /* --color-sidebar-ring: Sidebar focus ring color token. */
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* --------------------------------------------------------------------------
+   SECTION 6 -- BASE LAYER STYLES
+   -------------------------------------------------------------------------- */
+
+/*
+ * @layer base { ... }
+ *
+ * Tailwind organizes styles into three layers, in order of precedence:
+ *   1. base       -- global defaults, resets, element-level styles
+ *   2. components -- reusable component classes (e.g., .btn, .card)
+ *   3. utilities  -- single-purpose utility classes (e.g., .mt-4, .flex)
+ *
+ * By placing styles in @layer base, we tell Tailwind these are foundational
+ * styles that should have the LOWEST specificity. Any component or utility
+ * class will automatically override them if there's a conflict, which is
+ * the correct behavior.
+ *
+ * @apply is a Tailwind directive that lets you use Tailwind utility classes
+ * inside regular CSS rules. The utilities are expanded into their
+ * corresponding CSS properties at build time.
+ */
 @layer base {
+  /*
+   * * { ... }  -- The universal selector targets EVERY element on the page.
+   *
+   * @apply border-border outline-ring/50;
+   *
+   * This applies two default styles to every element:
+   *
+   *   border-border   -->  Sets the border-color to var(--border), which
+   *                        is the light gray defined above. This means
+   *                        whenever you add a border (e.g., "border" class
+   *                        or "border-b"), it uses the theme's border color
+   *                        automatically without needing to specify color.
+   *
+   *   outline-ring/50 -->  Sets the outline-color to var(--ring) at 50%
+   *                        opacity. The "/50" is Tailwind's opacity modifier
+   *                        syntax (50 = 50%). This gives a subtle, semi-
+   *                        transparent focus outline on all elements, which
+   *                        is important for keyboard accessibility.
+   */
   * {
     @apply border-border outline-ring/50;
   }
+
+  /*
+   * body { ... }  -- Styles applied to the <body> element.
+   *
+   * @apply bg-background text-foreground;
+   *
+   *   bg-background   -->  Sets the body's background-color to
+   *                        var(--background) -- white in light mode,
+   *                        very dark gray in dark mode.
+   *
+   *   text-foreground  -->  Sets the body's text color to
+   *                         var(--foreground) -- near-black in light mode,
+   *                         near-white in dark mode.
+   *
+   * Because all other elements inherit text color from their parent by
+   * default, setting it here on <body> ensures the entire page has the
+   * correct default text color for the current theme without any extra work.
+   */
   body {
     @apply bg-background text-foreground;
   }

@@ -1,9 +1,41 @@
+<!--
+  =====================================================================================
+  FILE: src/renderer/index.html
+  PURPOSE: This is the HTML entry point for the RENDERER process (the React UI).
+           When Electron loads the renderer, it loads THIS HTML file, which in turn
+           loads the React application via the <script> tag at the bottom.
+
+  HOW THIS FITS IN THE APP (for beginners):
+    Electron's main window loads this HTML file. The HTML provides:
+    1. A <div id="root"> — the empty container where React will render the entire UI
+    2. A <script> tag — tells the browser to load and execute the React app code (main.tsx)
+
+  The resulting UI appears as the LEFT SIDEBAR (450px wide) in the application window.
+  The RIGHT side of the window is the BrowserView showing the WorkAtAStartup website.
+  =====================================================================================
+-->
+
+<!-- DOCTYPE declaration — tells the browser this is an HTML5 document -->
 <!doctype html>
+
+<!-- The root <html> element — contains the entire page -->
 <html>
   <head>
+    <!-- Set the character encoding to UTF-8 (supports international characters, emojis, etc.) -->
     <meta charset="UTF-8" />
+
+    <!-- The page title — appears in the window title bar -->
     <title>mini-tsenta</title>
-    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+
+    <!-- Content Security Policy (CSP) — a security measure that restricts what resources
+         the page is allowed to load. This protects against XSS (Cross-Site Scripting) attacks.
+         https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <!-- CSP Rules explained:
+         - default-src 'self': by default, only allow loading resources from the same origin (our app)
+         - script-src 'self': only allow JavaScript from our own app (blocks injected scripts)
+         - style-src 'self' 'unsafe-inline': allow CSS from our app AND inline styles
+           ('unsafe-inline' is needed because many CSS-in-JS solutions use inline styles)
+         - img-src 'self' data:: allow images from our app AND data: URIs (base64-encoded images) -->
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
@@ -11,7 +43,15 @@
   </head>
 
   <body>
+    <!-- This empty <div> is where the entire React application will be rendered.
+         React's createRoot() function (in main.tsx) targets this element by its "root" ID
+         and replaces its contents with the React component tree. -->
     <div id="root"></div>
+
+    <!-- Load the React application entry point (main.tsx).
+         type="module" tells the browser to treat this as an ES Module (supports import/export syntax).
+         During development, Vite serves this file from its dev server with hot module replacement.
+         In production, this is bundled into optimized JavaScript files. -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
