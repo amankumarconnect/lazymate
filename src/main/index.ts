@@ -257,7 +257,7 @@ ipcMain.handle('start-automation', async () => {
               jobUrl: string,
               reason: string,
               matchScore?: number
-            ) => {
+            ): Promise<void> => {
               try {
                 // Check if it already exists to avoid unique constraint errors
                 const exists = await prisma.application.findUnique({ where: { jobUrl } })
