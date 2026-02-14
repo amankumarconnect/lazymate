@@ -21,5 +21,6 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.removeListener('log', handler)
     }
   },
-  getUserProfile: () => ipcRenderer.invoke('get-user-profile')
+  getUserProfile: () => ipcRenderer.invoke('get-user-profile'),
+  getApplications: () => ipcRenderer.invoke('get-applications')
 })

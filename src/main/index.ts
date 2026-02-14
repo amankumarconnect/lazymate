@@ -12,6 +12,7 @@ import {
 } from './ollama'
 import { PDFParse } from 'pdf-parse'
 import { writeFileSync, readFileSync, existsSync } from 'fs'
+import prisma from './db'
 
 // Playwright connects to Electron's own BrowserView via this CDP port
 app.commandLine.appendSwitch('remote-debugging-port', '9222')
@@ -96,7 +97,8 @@ async function scrollAndHighlight(page: Page, locator: ReturnType<Page['locator'
   await page.waitForTimeout(800)
 }
 
-const visitedCompanies = new Set<string>()
+
+// const visitedCompanies = new Set<string>() // Replaced by DB
 
 ipcMain.handle('start-automation', async () => {
   if (!userProfile) {
@@ -172,7 +174,13 @@ ipcMain.handle('start-automation', async () => {
           .filter((value, index, self) => self.indexOf(value) === index)
       })
 
-      const newCompanies = companiesOnScreen.filter((c) => !visitedCompanies.has(c))
+
+      const newCompanies: string[] = []
+      for (const c of companiesOnScreen) {
+        const fullUrl = getFullUrl(c)
+        const exists = await prisma.company.findUnique({ where: { url: fullUrl } })
+        if (!exists) newCompanies.push(c)
+      }
 
       log(`Found ${newCompanies.length} new companies.`)
 
@@ -189,7 +197,19 @@ ipcMain.handle('start-automation', async () => {
         }
         if (!automationRunning) break
 
-        visitedCompanies.add(relativeUrl)
+
+        const fullCompanyUrl = getFullUrl(relativeUrl)
+        try {
+          await prisma.company.create({
+            data: {
+              url: fullCompanyUrl,
+              name: relativeUrl.replace('/companies/', ''),
+              status: 'visited'
+            }
+          })
+        } catch (e) {
+          console.error('Failed to save company to DB:', e)
+        }
 
         const companyUrl = getFullUrl(relativeUrl)
         log(`Checking company: ${relativeUrl.replace('/companies/', '')}`)
@@ -300,6 +320,23 @@ ipcMain.handle('start-automation', async () => {
                     log(`Typing application (${coverLetter.length} chars)...`, { jobTitle })
 
                     await textArea.pressSequentially(coverLetter, { delay: 10, timeout: 60000 })
+
+                    // Save application to DB
+                    try {
+                      await prisma.application.create({
+                        data: {
+                          jobTitle,
+                          companyName: relativeUrl.replace('/companies/', ''),
+                          jobUrl: fullJobUrl,
+                          coverLetter,
+                          status: 'submitted' // or 'drafted'
+                        }
+                      })
+                      log('Application saved to database.', { type: 'success', jobTitle })
+                    } catch (e) {
+                      console.error('Failed to save application:', e)
+                      log('Failed to save application to DB', { type: 'error', jobTitle })
+                    }
 
                     // Submission disabled — remove this guard when ready to go live
                     log('Application filled! (Not submitted - testing mode)', {
@@ -428,6 +465,17 @@ ipcMain.handle('download-resume', async () => {
 
 ipcMain.handle('get-user-profile', async () => {
   return userProfile ? { hasResume: userProfile.hasResume } : null
+})
+
+ipcMain.handle('get-applications', async () => {
+  try {
+    return await prisma.application.findMany({
+      orderBy: { appliedAt: 'desc' }
+    })
+  } catch (error) {
+    console.error('Failed to fetch applications:', error)
+    return []
+  }
 })
 
 app.whenReady().then(() => {

@@ -1,0 +1,25 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  url       String   @unique
+  name      String?
+  visitedAt DateTime @default(now())
+  status    String   @default("visited") // visited, skipped, error
+}
+
+model Application {
+  id          String   @id @default(uuid())
+  jobTitle    String
+  companyName String
+  jobUrl      String   @unique
+  coverLetter String
+  status      String   @default("submitted") // submitted, drafted, failed
+  appliedAt   DateTime @default(now())
+}

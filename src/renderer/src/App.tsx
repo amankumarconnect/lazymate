@@ -3,6 +3,8 @@ import { Header } from './components/dashboard/Header'
 import { ActivityLog, LogEntry } from './components/dashboard/ActivityLog'
 import { ProfileEditView } from './components/dashboard/ProfileEditView'
 import { ProfileReadView } from './components/dashboard/ProfileReadView'
+import { Dashboard } from './components/dashboard/Dashboard'
+import { History } from 'lucide-react'
 
 function App(): JSX.Element {
   const [hasResume, setHasResume] = useState(false)
@@ -12,6 +14,7 @@ function App(): JSX.Element {
   const [isParsing, setIsParsing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
+  const [showDashboard, setShowDashboard] = useState(false)
 
   const addLog = (entry: Omit<LogEntry, 'timestamp'>): void => {
     setLogs((prev) => [...prev, { ...entry, timestamp: new Date() }])
@@ -20,7 +23,7 @@ function App(): JSX.Element {
   useEffect(() => {
     const loadProfile = async (): Promise<void> => {
       try {
-        // @ts-ignore
+        // @ts-ignore window.api is exposed in preload
         const savedProfile = await window.api.getUserProfile()
         if (savedProfile && savedProfile.hasResume) {
           setHasResume(true)
@@ -38,7 +41,7 @@ function App(): JSX.Element {
   }, [])
 
   useEffect(() => {
-    // @ts-ignore
+    // @ts-ignore window.api is exposed in preload
     const cleanup = window.api.onLog((msg: LogEntry) => {
       setLogs((prev) => [...prev, { ...msg, timestamp: new Date() }])
     })
@@ -48,7 +51,7 @@ function App(): JSX.Element {
   const handleStart = (): void => {
     setIsRunning(true)
     setIsPaused(false)
-    // @ts-ignore
+    // @ts-ignore window.api is exposed in preload
     window.api.startAutomation()
   }
 
@@ -58,7 +61,7 @@ function App(): JSX.Element {
 
     try {
       const buffer = await file.arrayBuffer()
-      // @ts-ignore
+      // @ts-ignore window.api is exposed in preload
       await window.api.saveResume(buffer)
       setHasResume(true)
       addLog({ message: 'Resume uploaded and parsed!', type: 'success' })
@@ -73,11 +76,11 @@ function App(): JSX.Element {
 
   const handleTogglePause = (): void => {
     if (isPaused) {
-      // @ts-ignore
+      // @ts-ignore window.api is exposed in preload
       window.api.resumeAutomation()
       setIsPaused(false)
     } else {
-      // @ts-ignore
+      // @ts-ignore window.api is exposed in preload
       window.api.pauseAutomation()
       setIsPaused(true)
     }
@@ -87,9 +90,22 @@ function App(): JSX.Element {
     // Width matches the sidebar constant in main/index.ts createWindow()
     <div className="h-screen w-[450px] bg-background border-r flex flex-col">
       <div className="p-4 space-y-4 flex-1 overflow-hidden flex flex-col">
-        <Header />
+        <div className="flex justify-between items-center">
+          <Header />
+          {!showDashboard && !editMode && (
+            <button
+              onClick={() => setShowDashboard(true)}
+              className="p-2 hover:bg-muted rounded-full"
+              title="View History"
+            >
+              <History className="w-5 h-5" />
+            </button>
+          )}
+        </div>
 
-        {isLoading ? (
+        {showDashboard ? (
+          <Dashboard onBack={() => setShowDashboard(false)} />
+        ) : isLoading ? (
           <div className="text-center text-sm text-muted-foreground">Loading profile...</div>
         ) : editMode ? (
           <ProfileEditView
@@ -110,7 +126,7 @@ function App(): JSX.Element {
           />
         )}
 
-        <ActivityLog logs={logs} />
+        {!showDashboard && <ActivityLog logs={logs} />}
       </div>
     </div>
   )
