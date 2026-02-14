@@ -97,7 +97,6 @@ async function scrollAndHighlight(page: Page, locator: ReturnType<Page['locator'
   await page.waitForTimeout(800)
 }
 
-
 // const visitedCompanies = new Set<string>() // Replaced by DB
 
 ipcMain.handle('start-automation', async () => {
@@ -174,7 +173,6 @@ ipcMain.handle('start-automation', async () => {
           .filter((value, index, self) => self.indexOf(value) === index)
       })
 
-
       const newCompanies: string[] = []
       for (const c of companiesOnScreen) {
         const fullUrl = getFullUrl(c)
@@ -196,7 +194,6 @@ ipcMain.handle('start-automation', async () => {
           await new Promise((resolve) => setTimeout(resolve, 500))
         }
         if (!automationRunning) break
-
 
         const fullCompanyUrl = getFullUrl(relativeUrl)
         try {
@@ -382,7 +379,7 @@ ipcMain.handle('start-automation', async () => {
                         jobUrl: fullJobUrl,
                         matchScore: fitResult.score
                       })
-                      
+
                       const savedApp = await prisma.application.create({
                         data: {
                           jobTitle,
@@ -397,7 +394,10 @@ ipcMain.handle('start-automation', async () => {
                       console.log('Saved app ID:', savedApp.id)
                     } catch (e) {
                       console.error('Failed to save application:', e)
-                      log(`Failed to save application to DB: ${(e as Error).message}`, { type: 'error', jobTitle })
+                      log(`Failed to save application to DB: ${(e as Error).message}`, {
+                        type: 'error',
+                        jobTitle
+                      })
                     }
 
                     // Submission disabled — remove this guard when ready to go live

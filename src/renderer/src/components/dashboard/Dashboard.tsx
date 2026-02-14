@@ -53,19 +53,21 @@ export function Dashboard({ onBack }: { onBack: () => void }) {
       <div className="flex space-x-2 border-b pb-2 mb-4">
         <button
           onClick={() => setCurrentTab('applied')}
-          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${currentTab === 'applied'
-            ? 'bg-black text-white shadow-sm'
-            : 'text-gray-600 hover:bg-gray-100'
-            }`}
+          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            currentTab === 'applied'
+              ? 'bg-black text-white shadow-sm'
+              : 'text-gray-600 hover:bg-gray-100'
+          }`}
         >
           Applied ({applications.filter((a) => a.status !== 'skipped').length})
         </button>
         <button
           onClick={() => setCurrentTab('skipped')}
-          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${currentTab === 'skipped'
-            ? 'bg-black text-white shadow-sm'
-            : 'text-gray-600 hover:bg-gray-100'
-            }`}
+          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            currentTab === 'skipped'
+              ? 'bg-black text-white shadow-sm'
+              : 'text-gray-600 hover:bg-gray-100'
+          }`}
         >
           Skipped ({applications.filter((a) => a.status === 'skipped').length})
         </button>
@@ -95,12 +97,13 @@ export function Dashboard({ onBack }: { onBack: () => void }) {
                   </div>
                 </div>
                 <div
-                  className={`text-xs px-2 py-1 rounded-full ${app.status === 'submitted'
-                    ? 'bg-green-100 text-green-800'
-                    : app.status === 'skipped'
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-gray-100'
-                    }`}
+                  className={`text-xs px-2 py-1 rounded-full ${
+                    app.status === 'submitted'
+                      ? 'bg-green-100 text-green-800'
+                      : app.status === 'skipped'
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-gray-100'
+                  }`}
                 >
                   {app.status}
                 </div>
@@ -127,8 +130,12 @@ export function Dashboard({ onBack }: { onBack: () => void }) {
                 >
                   <FileText className="w-3 h-3" />{' '}
                   {expandedId === app.id
-                    ? app.status === 'skipped' ? 'Hide Reason' : 'Hide Cover Letter'
-                    : app.status === 'skipped' ? 'Show Reason' : 'Show Cover Letter'}
+                    ? app.status === 'skipped'
+                      ? 'Hide Reason'
+                      : 'Hide Cover Letter'
+                    : app.status === 'skipped'
+                      ? 'Show Reason'
+                      : 'Show Cover Letter'}
                 </button>
               </div>
 
