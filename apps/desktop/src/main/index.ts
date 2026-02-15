@@ -3,13 +3,7 @@ import { join } from "path";
 import { electronApp, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
 import { chromium, Page } from "playwright-core";
-import {
-  isJobTitleRelevant,
-  isJobRelevant,
-  generateApplication,
-  getEmbedding,
-  generateJobPersona,
-} from "./ollama";
+// Local AI imports removed
 import { PDFParse } from "pdf-parse";
 import { writeFileSync, readFileSync, existsSync } from "fs";
 import { api } from "./api";
@@ -294,9 +288,10 @@ ipcMain.handle("start-automation", async () => {
               continue;
 
             log(`Checking title match...`, { jobTitle });
-            const titleResult = await isJobTitleRelevant(
+            const titleResult = await api.aiCheckJobRelevance(
               jobTitle,
               userProfile.embedding,
+              "title",
             );
             if (!titleResult.relevant) {
               log(`Title not relevant, skipping.`, {
@@ -350,9 +345,10 @@ ipcMain.handle("start-automation", async () => {
                 });
 
                 log("AI analyzing job description...", { jobTitle });
-                const fitResult = await isJobRelevant(
+                const fitResult = await api.aiCheckJobRelevance(
                   jobDescriptionText,
                   userProfile.embedding,
+                  "description",
                 );
 
                 if (!fitResult.relevant) {
@@ -388,7 +384,7 @@ ipcMain.handle("start-automation", async () => {
                   if (await textArea.isVisible()) {
                     await scrollAndHighlight(page, textArea);
 
-                    const coverLetter = await generateApplication(
+                    const { coverLetter } = await api.aiGenerateApplication(
                       jobDescriptionText,
                       userProfile.text,
                     );
@@ -531,11 +527,11 @@ ipcMain.handle("save-resume", async (_event, buffer: ArrayBuffer) => {
     const text = result.text;
 
     console.log("Generating Target Job Persona from resume...");
-    const persona = await generateJobPersona(text);
+    const { persona } = await api.aiGenerateJobPersona(text);
     console.log("Generated Persona:", persona);
 
     console.log("Generating embedding from persona...");
-    const embedding = await getEmbedding(persona);
+    const { embedding } = await api.aiGetEmbedding(persona);
 
     // text = original resume (for cover letters), embedding = from persona (for matching)
     userProfile = { text, embedding, hasResume: true };

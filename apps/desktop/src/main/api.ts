@@ -97,4 +97,39 @@ export const api = {
   getApplications: async () => {
     return request<Application[]>("/applications");
   },
+
+  aiGenerateJobPersona: async (resumeText: string) => {
+    return request<{ persona: string }>("/ai/job-persona", {
+      method: "POST",
+      body: JSON.stringify({ resumeText }),
+    });
+  },
+
+  aiGetEmbedding: async (text: string) => {
+    return request<{ embedding: number[] }>("/ai/embedding", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+  },
+
+  aiCheckJobRelevance: async (
+    jobText: string,
+    userEmbedding: number[],
+    type: "title" | "description",
+  ) => {
+    return request<{ relevant: boolean; score: number }>("/ai/analyze-job", {
+      method: "POST",
+      body: JSON.stringify({ jobText, userEmbedding, type }),
+    });
+  },
+
+  aiGenerateApplication: async (
+    jobDescription: string,
+    userProfile: string,
+  ) => {
+    return request<{ coverLetter: string }>("/ai/generate-application", {
+      method: "POST",
+      body: JSON.stringify({ jobDescription, userProfile }),
+    });
+  },
 };

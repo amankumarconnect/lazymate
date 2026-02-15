@@ -28,3 +28,14 @@ router
     ]);
   })
   .prefix("api");
+
+const AiController = () => import("#controllers/ai_controller");
+
+router
+  .group(() => {
+    router.post("/ai/job-persona", [AiController, "generateJobPersona"]);
+    router.post("/ai/embedding", [AiController, "getEmbedding"]);
+    router.post("/ai/analyze-job", [AiController, "checkJobRelevance"]);
+    router.post("/ai/generate-application", [AiController, "generateApplication"]);
+  })
+  .prefix("api");
