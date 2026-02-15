@@ -1,16 +1,16 @@
-import { JSX } from 'react'
-import { Button } from '../ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { JSX } from "react";
+import { Button } from "../ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
-import { Download } from 'lucide-react'
+import { Download } from "lucide-react";
 
 interface ProfileReadViewProps {
-  hasResume: boolean
-  onEdit: () => void
-  isRunning: boolean
-  isPaused: boolean
-  onStart: () => void
-  onTogglePause: () => void
+  hasResume: boolean;
+  onEdit: () => void;
+  isRunning: boolean;
+  isPaused: boolean;
+  onStart: () => void;
+  onTogglePause: () => void;
 }
 
 export function ProfileReadView({
@@ -19,12 +19,12 @@ export function ProfileReadView({
   isRunning,
   isPaused,
   onStart,
-  onTogglePause
+  onTogglePause,
 }: ProfileReadViewProps): JSX.Element {
   const handleDownload = async (): Promise<void> => {
     // @ts-ignore
-    await window.api.downloadResume()
-  }
+    await window.api.downloadResume();
+  };
 
   return (
     <div className="space-y-4">
@@ -32,16 +32,23 @@ export function ProfileReadView({
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
           <CardTitle className="text-sm">Resume Status</CardTitle>
           <Button variant="ghost" size="sm" onClick={onEdit}>
-            {hasResume ? 'Replace' : 'Upload'}
+            {hasResume ? "Replace" : "Upload"}
           </Button>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="text-sm text-muted-foreground">
-            {hasResume ? 'Resume uploaded and ready for matching.' : 'No resume uploaded yet.'}
+            {hasResume
+              ? "Resume uploaded and ready for matching."
+              : "No resume uploaded yet."}
           </div>
 
           {hasResume && (
-            <Button variant="outline" size="sm" className="w-full gap-2" onClick={handleDownload}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-2"
+              onClick={handleDownload}
+            >
               <Download className="h-4 w-4" />
               Download Resume
             </Button>
@@ -55,13 +62,13 @@ export function ProfileReadView({
         </Button>
       ) : (
         <Button
-          variant={isPaused ? 'default' : 'secondary'}
+          variant={isPaused ? "default" : "secondary"}
           className="w-full"
           onClick={onTogglePause}
         >
-          {isPaused ? 'Continue Applying' : 'Pause Applying'}
+          {isPaused ? "Continue Applying" : "Pause Applying"}
         </Button>
       )}
     </div>
-  )
+  );
 }

@@ -1,90 +1,90 @@
-import { useState, useEffect, JSX } from 'react'
-import { Header } from './components/dashboard/Header'
-import { ActivityLog, LogEntry } from './components/dashboard/ActivityLog'
-import { ProfileEditView } from './components/dashboard/ProfileEditView'
-import { ProfileReadView } from './components/dashboard/ProfileReadView'
-import { Dashboard } from './components/dashboard/Dashboard'
-import { History } from 'lucide-react'
+import { useState, useEffect, JSX } from "react";
+import { Header } from "./components/dashboard/Header";
+import { ActivityLog, LogEntry } from "./components/dashboard/ActivityLog";
+import { ProfileEditView } from "./components/dashboard/ProfileEditView";
+import { ProfileReadView } from "./components/dashboard/ProfileReadView";
+import { Dashboard } from "./components/dashboard/Dashboard";
+import { History } from "lucide-react";
 
 function App(): JSX.Element {
-  const [hasResume, setHasResume] = useState(false)
-  const [logs, setLogs] = useState<LogEntry[]>([])
-  const [isRunning, setIsRunning] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
-  const [isParsing, setIsParsing] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [editMode, setEditMode] = useState(false)
-  const [showDashboard, setShowDashboard] = useState(false)
+  const [hasResume, setHasResume] = useState(false);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
 
-  const addLog = (entry: Omit<LogEntry, 'timestamp'>): void => {
-    setLogs((prev) => [...prev, { ...entry, timestamp: new Date() }])
-  }
+  const addLog = (entry: Omit<LogEntry, "timestamp">): void => {
+    setLogs((prev) => [...prev, { ...entry, timestamp: new Date() }]);
+  };
 
   useEffect(() => {
     const loadProfile = async (): Promise<void> => {
       try {
         // @ts-ignore window.api is exposed in preload
-        const savedProfile = await window.api.getUserProfile()
+        const savedProfile = await window.api.getUserProfile();
         if (savedProfile && savedProfile.hasResume) {
-          setHasResume(true)
+          setHasResume(true);
         } else {
-          setEditMode(true)
+          setEditMode(true);
         }
       } catch (error) {
-        console.error('Failed to load profile:', error)
-        setEditMode(true)
+        console.error("Failed to load profile:", error);
+        setEditMode(true);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
-    loadProfile()
-  }, [])
+    };
+    loadProfile();
+  }, []);
 
   useEffect(() => {
     // @ts-ignore window.api is exposed in preload
     const cleanup = window.api.onLog((msg: LogEntry) => {
-      setLogs((prev) => [...prev, { ...msg, timestamp: new Date() }])
-    })
-    return cleanup
-  }, [])
+      setLogs((prev) => [...prev, { ...msg, timestamp: new Date() }]);
+    });
+    return cleanup;
+  }, []);
 
   const handleStart = (): void => {
-    setIsRunning(true)
-    setIsPaused(false)
+    setIsRunning(true);
+    setIsPaused(false);
     // @ts-ignore window.api is exposed in preload
-    window.api.startAutomation()
-  }
+    window.api.startAutomation();
+  };
 
   const handleFileUpload = async (file: File): Promise<void> => {
-    setIsParsing(true)
-    addLog({ message: 'Uploading resume...', type: 'info' })
+    setIsParsing(true);
+    addLog({ message: "Uploading resume...", type: "info" });
 
     try {
-      const buffer = await file.arrayBuffer()
+      const buffer = await file.arrayBuffer();
       // @ts-ignore window.api is exposed in preload
-      await window.api.saveResume(buffer)
-      setHasResume(true)
-      addLog({ message: 'Resume uploaded and parsed!', type: 'success' })
-      setEditMode(false)
+      await window.api.saveResume(buffer);
+      setHasResume(true);
+      addLog({ message: "Resume uploaded and parsed!", type: "success" });
+      setEditMode(false);
     } catch (error) {
-      console.error(error)
-      addLog({ message: 'Error parsing resume', type: 'error' })
+      console.error(error);
+      addLog({ message: "Error parsing resume", type: "error" });
     } finally {
-      setIsParsing(false)
+      setIsParsing(false);
     }
-  }
+  };
 
   const handleTogglePause = (): void => {
     if (isPaused) {
       // @ts-ignore window.api is exposed in preload
-      window.api.resumeAutomation()
-      setIsPaused(false)
+      window.api.resumeAutomation();
+      setIsPaused(false);
     } else {
       // @ts-ignore window.api is exposed in preload
-      window.api.pauseAutomation()
-      setIsPaused(true)
+      window.api.pauseAutomation();
+      setIsPaused(true);
     }
-  }
+  };
 
   return (
     // Width matches the sidebar constant in main/index.ts createWindow()
@@ -106,7 +106,9 @@ function App(): JSX.Element {
         {showDashboard ? (
           <Dashboard onBack={() => setShowDashboard(false)} />
         ) : isLoading ? (
-          <div className="text-center text-sm text-muted-foreground">Loading profile...</div>
+          <div className="text-center text-sm text-muted-foreground">
+            Loading profile...
+          </div>
         ) : editMode ? (
           <ProfileEditView
             hasResume={hasResume}
@@ -129,7 +131,7 @@ function App(): JSX.Element {
         {!showDashboard && <ActivityLog logs={logs} />}
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

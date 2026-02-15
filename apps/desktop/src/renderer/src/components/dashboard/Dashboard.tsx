@@ -1,45 +1,47 @@
-import { useEffect, useState } from 'react'
-import { FileText, ExternalLink, Calendar } from 'lucide-react'
+import { useEffect, useState } from "react";
+import { FileText, ExternalLink, Calendar } from "lucide-react";
 
 interface Application {
-  id: string
-  jobTitle: string
-  companyName: string
-  jobUrl: string
-  coverLetter: string
-  status: string
-  matchScore?: number
-  appliedAt: string
+  id: string;
+  jobTitle: string;
+  companyName: string;
+  jobUrl: string;
+  coverLetter: string;
+  status: string;
+  matchScore?: number;
+  appliedAt: string;
 }
 
 export function Dashboard({ onBack }: { onBack: () => void }) {
-  const [applications, setApplications] = useState<Application[]>([])
-  const [loading, setLoading] = useState(true)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const [currentTab, setCurrentTab] = useState<'applied' | 'skipped'>('applied')
+  const [currentTab, setCurrentTab] = useState<"applied" | "skipped">(
+    "applied",
+  );
 
   useEffect(() => {
     const fetchApps = async () => {
       try {
         // @ts-ignore
-        const apps = await window.api.getApplications()
-        setApplications(apps)
+        const apps = await window.api.getApplications();
+        setApplications(apps);
       } catch (error) {
-        console.error('Failed to load applications', error)
+        console.error("Failed to load applications", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchApps()
-  }, [])
+    };
+    fetchApps();
+  }, []);
 
   const filteredApps = applications.filter((app) => {
-    if (currentTab === 'applied') return app.status !== 'skipped'
-    return app.status === 'skipped'
-  })
+    if (currentTab === "applied") return app.status !== "skipped";
+    return app.status === "skipped";
+  });
 
-  if (loading) return <div className="p-4 text-center">Loading history...</div>
+  if (loading) return <div className="p-4 text-center">Loading history...</div>;
 
   return (
     <div className="flex-1 overflow-auto p-1 space-y-4">
@@ -52,24 +54,24 @@ export function Dashboard({ onBack }: { onBack: () => void }) {
 
       <div className="flex space-x-2 border-b pb-2 mb-4">
         <button
-          onClick={() => setCurrentTab('applied')}
+          onClick={() => setCurrentTab("applied")}
           className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-            currentTab === 'applied'
-              ? 'bg-black text-white shadow-sm'
-              : 'text-gray-600 hover:bg-gray-100'
+            currentTab === "applied"
+              ? "bg-black text-white shadow-sm"
+              : "text-gray-600 hover:bg-gray-100"
           }`}
         >
-          Applied ({applications.filter((a) => a.status !== 'skipped').length})
+          Applied ({applications.filter((a) => a.status !== "skipped").length})
         </button>
         <button
-          onClick={() => setCurrentTab('skipped')}
+          onClick={() => setCurrentTab("skipped")}
           className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-            currentTab === 'skipped'
-              ? 'bg-black text-white shadow-sm'
-              : 'text-gray-600 hover:bg-gray-100'
+            currentTab === "skipped"
+              ? "bg-black text-white shadow-sm"
+              : "text-gray-600 hover:bg-gray-100"
           }`}
         >
-          Skipped ({applications.filter((a) => a.status === 'skipped').length})
+          Skipped ({applications.filter((a) => a.status === "skipped").length})
         </button>
       </div>
 
@@ -98,11 +100,11 @@ export function Dashboard({ onBack }: { onBack: () => void }) {
                 </div>
                 <div
                   className={`text-xs px-2 py-1 rounded-full ${
-                    app.status === 'submitted'
-                      ? 'bg-green-100 text-green-800'
-                      : app.status === 'skipped'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-gray-100'
+                    app.status === "submitted"
+                      ? "bg-green-100 text-green-800"
+                      : app.status === "skipped"
+                        ? "bg-amber-100 text-amber-800"
+                        : "bg-gray-100"
                   }`}
                 >
                   {app.status}
@@ -125,23 +127,27 @@ export function Dashboard({ onBack }: { onBack: () => void }) {
                   <ExternalLink className="w-3 h-3" /> View Job
                 </a>
                 <button
-                  onClick={() => setExpandedId(expandedId === app.id ? null : app.id)}
+                  onClick={() =>
+                    setExpandedId(expandedId === app.id ? null : app.id)
+                  }
                   className="text-xs flex items-center gap-1 text-gray-600 hover:underline"
                 >
-                  <FileText className="w-3 h-3" />{' '}
+                  <FileText className="w-3 h-3" />{" "}
                   {expandedId === app.id
-                    ? app.status === 'skipped'
-                      ? 'Hide Reason'
-                      : 'Hide Cover Letter'
-                    : app.status === 'skipped'
-                      ? 'Show Reason'
-                      : 'Show Cover Letter'}
+                    ? app.status === "skipped"
+                      ? "Hide Reason"
+                      : "Hide Cover Letter"
+                    : app.status === "skipped"
+                      ? "Show Reason"
+                      : "Show Cover Letter"}
                 </button>
               </div>
 
               {expandedId === app.id && (
                 <div className="mt-3 p-3 bg-muted/50 rounded text-xs whitespace-pre-wrap font-mono border">
-                  {app.status === 'skipped' && <span className="font-bold">Skipped Reason: </span>}
+                  {app.status === "skipped" && (
+                    <span className="font-bold">Skipped Reason: </span>
+                  )}
                   {app.coverLetter}
                 </div>
               )}
@@ -150,5 +156,5 @@ export function Dashboard({ onBack }: { onBack: () => void }) {
         </div>
       )}
     </div>
-  )
+  );
 }

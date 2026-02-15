@@ -1,109 +1,123 @@
-import { Ollama } from 'ollama'
+import { Ollama } from "ollama";
 
-const ollama = new Ollama()
-const MODEL_GENERATION = process.env.OLLAMA_MODEL_GENERATION || 'gemma3:4b'
-const MODEL_EMBEDDING = process.env.OLLAMA_MODEL_EMBEDDING || 'qwen3-embedding:0.6b'
+const ollama = new Ollama();
+const MODEL_GENERATION = process.env.OLLAMA_MODEL_GENERATION || "gemma3:4b";
+const MODEL_EMBEDDING =
+  process.env.OLLAMA_MODEL_EMBEDDING || "qwen3-embedding:0.6b";
 
-const MAX_CACHE_SIZE = 100
-const jobTitleCache = new Map<string, { relevant: boolean; score: number }>()
+const MAX_CACHE_SIZE = 100;
+const jobTitleCache = new Map<string, { relevant: boolean; score: number }>();
 
 // Tune these thresholds to control match sensitivity
-const TITLE_THRESHOLD = 0.45
-const DESCRIPTION_THRESHOLD = 0.45
+const TITLE_THRESHOLD = 0.45;
+const DESCRIPTION_THRESHOLD = 0.45;
 
 function cosineSimilarity(vecA: number[], vecB: number[]): number {
-  const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0)
-  const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0))
-  const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0))
-  if (magnitudeA === 0 || magnitudeB === 0) return 0
-  return dotProduct / (magnitudeA * magnitudeB)
+  const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
+  const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
+  const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
+  if (magnitudeA === 0 || magnitudeB === 0) return 0;
+  return dotProduct / (magnitudeA * magnitudeB);
 }
 
 export async function getEmbedding(text: string): Promise<number[]> {
   try {
     const response = await ollama.embed({
       model: MODEL_EMBEDDING,
-      input: text
-    })
-    return response.embeddings[0]
+      input: text,
+    });
+    return response.embeddings[0];
   } catch (error) {
-    console.error('Ollama embedding error:', error)
-    return []
+    console.error("Ollama embedding error:", error);
+    return [];
   }
 }
 
 // Quick embedding-based check to skip obviously irrelevant jobs without navigating to them
 export async function isJobTitleRelevant(
   jobTitle: string,
-  userProfileEmbedding: number[]
+  userProfileEmbedding: number[],
 ): Promise<{ relevant: boolean; score: number }> {
-  const cacheKey = `${jobTitle.trim()}|${userProfileEmbedding.length}`
+  const cacheKey = `${jobTitle.trim()}|${userProfileEmbedding.length}`;
   if (jobTitleCache.has(cacheKey)) {
-    return jobTitleCache.get(cacheKey)!
+    return jobTitleCache.get(cacheKey)!;
   }
 
   try {
-    const titleEmbedding = await getEmbedding(jobTitle)
+    const titleEmbedding = await getEmbedding(jobTitle);
 
     if (titleEmbedding.length === 0 || userProfileEmbedding.length === 0) {
-      console.warn('[AI Title Check] Failed to get embeddings, defaulting to TRUE')
-      return { relevant: true, score: -1 }
+      console.warn(
+        "[AI Title Check] Failed to get embeddings, defaulting to TRUE",
+      );
+      return { relevant: true, score: -1 };
     }
 
-    const similarity = cosineSimilarity(titleEmbedding, userProfileEmbedding)
-    const isRelevant = similarity >= TITLE_THRESHOLD
+    const similarity = cosineSimilarity(titleEmbedding, userProfileEmbedding);
+    const isRelevant = similarity >= TITLE_THRESHOLD;
 
     console.log(
       `[AI Title Check] "${jobTitle}" vs Profile -> Similarity: ${similarity.toFixed(4)} -> ${
-        isRelevant ? 'RELEVANT' : 'SKIP'
-      }`
-    )
+        isRelevant ? "RELEVANT" : "SKIP"
+      }`,
+    );
 
-    const result = { relevant: isRelevant, score: Math.round(similarity * 100) }
+    const result = {
+      relevant: isRelevant,
+      score: Math.round(similarity * 100),
+    };
 
     // Evict oldest entry when cache is full
     if (jobTitleCache.size >= MAX_CACHE_SIZE) {
-      const firstKey = jobTitleCache.keys().next().value
-      if (firstKey) jobTitleCache.delete(firstKey)
+      const firstKey = jobTitleCache.keys().next().value;
+      if (firstKey) jobTitleCache.delete(firstKey);
     }
-    jobTitleCache.set(cacheKey, result)
+    jobTitleCache.set(cacheKey, result);
 
-    return result
+    return result;
   } catch (error) {
-    console.error('Ollama isJobTitleRelevant error:', error)
-    return { relevant: true, score: -1 }
+    console.error("Ollama isJobTitleRelevant error:", error);
+    return { relevant: true, score: -1 };
   }
 }
 
 export async function isJobRelevant(
   jobDescription: string,
-  userProfileEmbedding: number[]
+  userProfileEmbedding: number[],
 ): Promise<{ relevant: boolean; score: number }> {
   try {
-    const descriptionEmbedding = await getEmbedding(jobDescription)
+    const descriptionEmbedding = await getEmbedding(jobDescription);
 
-    if (descriptionEmbedding.length === 0 || userProfileEmbedding.length === 0) {
-      console.warn('[AI Job Check] Failed to get embeddings, defaulting to TRUE')
-      return { relevant: true, score: -1 }
+    if (
+      descriptionEmbedding.length === 0 ||
+      userProfileEmbedding.length === 0
+    ) {
+      console.warn(
+        "[AI Job Check] Failed to get embeddings, defaulting to TRUE",
+      );
+      return { relevant: true, score: -1 };
     }
 
-    const similarity = cosineSimilarity(descriptionEmbedding, userProfileEmbedding)
-    const isRelevant = similarity >= DESCRIPTION_THRESHOLD
+    const similarity = cosineSimilarity(
+      descriptionEmbedding,
+      userProfileEmbedding,
+    );
+    const isRelevant = similarity >= DESCRIPTION_THRESHOLD;
 
     console.log(
-      `[AI Job Check] Similarity: ${similarity.toFixed(4)} -> ${isRelevant ? 'GOOD FIT' : 'NOT A FIT'}`
-    )
+      `[AI Job Check] Similarity: ${similarity.toFixed(4)} -> ${isRelevant ? "GOOD FIT" : "NOT A FIT"}`,
+    );
 
-    return { relevant: isRelevant, score: Math.round(similarity * 100) }
+    return { relevant: isRelevant, score: Math.round(similarity * 100) };
   } catch (error) {
-    console.error('Ollama isJobRelevant error:', error)
-    return { relevant: true, score: -1 }
+    console.error("Ollama isJobRelevant error:", error);
+    return { relevant: true, score: -1 };
   }
 }
 
 export async function generateApplication(
   jobDescription: string,
-  userProfile: string
+  userProfile: string,
 ): Promise<string> {
   const prompt = `You are a job applicant writing a cover letter. Write a professional, personalized, and concise application based on the job description and user profile below. Do not include any headers, greetings, or sign-offs — just the body text.
 
@@ -113,21 +127,21 @@ ${userProfile}
 JOB DESCRIPTION:
 ${jobDescription}
 
-Write the application now:`
+Write the application now:`;
 
   try {
     const response = await ollama.chat({
       model: MODEL_GENERATION,
-      messages: [{ role: 'user', content: prompt }],
-      options: { temperature: 0.7 }
-    })
+      messages: [{ role: "user", content: prompt }],
+      options: { temperature: 0.7 },
+    });
     return (
       response.message.content.trim() ||
-      'Hi! I am interested in this role and believe my skills would be a great fit for your team.'
-    )
+      "Hi! I am interested in this role and believe my skills would be a great fit for your team."
+    );
   } catch (error) {
-    console.error('Ollama generateApplication error:', error)
-    return `Hi! I'm interested in this role. Based on my experience and skills, I believe I would be a great fit for your team.`
+    console.error("Ollama generateApplication error:", error);
+    return `Hi! I'm interested in this role. Based on my experience and skills, I believe I would be a great fit for your team.`;
   }
 }
 
@@ -164,17 +178,17 @@ Return **ONLY** the hypothetical Job Description paragraph. Do not output your t
 ---
 
 ### INPUT RESUME
-${resumeText}`
+${resumeText}`;
 
   try {
     const response = await ollama.chat({
       model: MODEL_GENERATION,
-      messages: [{ role: 'user', content: prompt }],
-      options: { temperature: 0.3 }
-    })
-    return response.message.content.trim()
+      messages: [{ role: "user", content: prompt }],
+      options: { temperature: 0.3 },
+    });
+    return response.message.content.trim();
   } catch (error) {
-    console.error('Ollama generateJobPersona error:', error)
-    return resumeText
+    console.error("Ollama generateJobPersona error:", error);
+    return resumeText;
   }
 }
