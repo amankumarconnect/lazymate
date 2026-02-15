@@ -30,3 +30,15 @@ model Application {
 
   @@unique([userId, jobUrl])
 }
+
+model JobTextEmbedding {
+  id             String   @id @default(uuid())
+  model          String
+  textHash       String
+  normalizedText String
+  embedding      Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([model, textHash])
+}

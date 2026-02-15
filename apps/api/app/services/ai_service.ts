@@ -1,5 +1,6 @@
 import { Ollama } from "ollama";
-import env from "#start/env";
+import prisma from "#services/prisma";
+import { createHash } from "node:crypto";
 
 export class AiService {
   private ollama: Ollama;
@@ -25,6 +26,73 @@ export class AiService {
     return dotProduct / (magnitudeA * magnitudeB);
   }
 
+  private normalizeEmbeddingText(text: string): string {
+    return text.trim().replace(/\s+/g, " ");
+  }
+
+  private getEmbeddingHash(normalizedText: string): string {
+    return createHash("sha256").update(normalizedText).digest("hex");
+  }
+
+  private isNumberArray(value: unknown): value is number[] {
+    return (
+      Array.isArray(value) && value.every((item) => typeof item === "number")
+    );
+  }
+
+  async getOrCreateCachedEmbedding(text: string): Promise<number[]> {
+    const normalizedText = this.normalizeEmbeddingText(text);
+    if (!normalizedText) return [];
+
+    const textHash = this.getEmbeddingHash(normalizedText);
+
+    const cached = await prisma.jobTextEmbedding.findUnique({
+      where: {
+        model_textHash: {
+          model: this.modelEmbedding,
+          textHash,
+        },
+      },
+      select: {
+        embedding: true,
+      },
+    });
+
+    if (cached && this.isNumberArray(cached.embedding)) {
+      return cached.embedding;
+    }
+
+    const embedding = await this.getEmbedding(normalizedText);
+    if (embedding.length === 0) {
+      return [];
+    }
+
+    try {
+      await prisma.jobTextEmbedding.upsert({
+        where: {
+          model_textHash: {
+            model: this.modelEmbedding,
+            textHash,
+          },
+        },
+        create: {
+          model: this.modelEmbedding,
+          textHash,
+          normalizedText,
+          embedding,
+        },
+        update: {
+          normalizedText,
+          embedding,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to persist job embedding cache:", error);
+    }
+
+    return embedding;
+  }
+
   async getEmbedding(text: string): Promise<number[]> {
     try {
       const response = await this.ollama.embed({
@@ -43,7 +111,7 @@ export class AiService {
     userProfileEmbedding: number[],
   ): Promise<{ relevant: boolean; score: number }> {
     try {
-      const titleEmbedding = await this.getEmbedding(jobTitle);
+      const titleEmbedding = await this.getOrCreateCachedEmbedding(jobTitle);
 
       if (titleEmbedding.length === 0 || userProfileEmbedding.length === 0) {
         return { relevant: true, score: -1 };
@@ -70,7 +138,8 @@ export class AiService {
     userProfileEmbedding: number[],
   ): Promise<{ relevant: boolean; score: number }> {
     try {
-      const descriptionEmbedding = await this.getEmbedding(jobDescription);
+      const descriptionEmbedding =
+        await this.getOrCreateCachedEmbedding(jobDescription);
 
       if (
         descriptionEmbedding.length === 0 ||
