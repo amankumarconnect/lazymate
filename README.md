@@ -1,27 +1,27 @@
 ## 1) How to run the app
 
-1. I install dependencies from repo root.
+1. Install dependencies from repo root.
    - `pnpm install`
 
-2. I create env files.
+2. Create env files.
    - Copy `apps/api/.env.example` to `apps/api/.env`
    - Copy `apps/desktop/.env.example` to `apps/desktop/.env`
 
-3. I set required env values.
+3. Set required env values.
    - In `apps/api/.env`: `DATABASE_URL`, `OLLAMA_MODEL_GENERATION`, `OLLAMA_MODEL_EMBEDDING` (other defaults are already in example)
    - In `apps/desktop/.env`: `DATABASE_URL`, `OLLAMA_MODEL_GENERATION`, `OLLAMA_MODEL_EMBEDDING`
 
-4. I make sure PostgreSQL is running.
+4. Make sure PostgreSQL is running.
    - Example with Docker: `docker run --name dockpost -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=Nothing1234 -e POSTGRES_DB=mini_tsenta -p 5432:5432 -d postgres`
 
-5. I run DB migrations (from `apps/api`).
+5. Run DB migrations (from `apps/api`).
    - `npx prisma migrate dev`
 
-6. I make sure Ollama is running and models are pulled.
+6. Make sure Ollama is running and models are pulled.
    - `ollama pull gemma3:4b`
    - `ollama pull qwen3-embedding:0.6b`
 
-7. I start everything from repo root.
+7. Start everything from repo root.
    - `pnpm run dev` _(API + Desktop together, recommended)_
    - Optional: `pnpm run dev:api` and `pnpm run dev:desktop` separately
 
