@@ -25,37 +25,7 @@
    - `pnpm run dev` _(API + Desktop together, recommended)_
    - Optional: `pnpm run dev:api` and `pnpm run dev:desktop` separately
 
-## 2) What is the complete tech stack
-
-- **Monorepo**
-  - pnpm workspaces
-
-- **Root package**
-  - devDependencies: `concurrently`, `prettier`
-
-- **API app (`apps/api`)**
-  - framework/runtime: `@adonisjs/core`, `@adonisjs/auth`, `@adonisjs/cors`, `@adonisjs/lucid`, `reflect-metadata`
-  - database: `postgresql`, `pg`, `prisma`, `@prisma/client`, `@prisma/adapter-pg`
-  - AI: `ollama`
-  - validation/date/env: `@vinejs/vine`, `luxon`, `dotenv`
-  - devDependencies: `@adonisjs/assembler`, `@adonisjs/eslint-config`, `@adonisjs/prettier-config`, `@adonisjs/tsconfig`, `@japa/api-client`, `@japa/assert`, `@japa/plugin-adonisjs`, `@japa/runner`, `@swc/core`, `@types/luxon`, `@types/node`, `@types/pg`, `eslint`, `hot-hook`, `pino-pretty`, `prettier`, `ts-node-maintained`, `typescript`
-
-- **Desktop app (`apps/desktop`)**
-  - desktop/runtime: `electron`, `electron-vite`, `electron-builder`, `@electron-toolkit/preload`, `@electron-toolkit/utils`
-  - frontend: `react`, `react-dom`, `vite`, `@vitejs/plugin-react`, `typescript`
-  - UI/styling: `tailwindcss`, `@tailwindcss/vite`, `radix-ui`, `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css`, `lucide-react`
-  - state: `@reduxjs/toolkit`, `react-redux`
-  - automation + parsing: `playwright-core`, `pdf-parse`, `@types/pdf-parse`
-  - AI/env: `ollama`, `dotenv`, `@heyputer/puter.js`
-  - devDependencies: `@electron-toolkit/eslint-config-prettier`, `@electron-toolkit/eslint-config-ts`, `@electron-toolkit/tsconfig`, `@types/node`, `@types/react`, `@types/react-dom`, `eslint`, `eslint-plugin-react`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `prettier`, `ts-node`
-
-- **Infra + data + protocols used by the app**
-  - database: PostgreSQL
-  - local AI server: Ollama
-  - browser automation connection: CDP (`remote-debugging-port`)
-  - API style: REST JSON over HTTP
-
-## 3) What are all the features (step by step)
+## 2) All the features (step by step)
 
 1. **Resume setup in desktop app**
    - I can upload a PDF resume.
@@ -135,3 +105,33 @@
     - `Company` table with per-user unique URL.
     - `Application` table with per-user unique job URL and match score.
     - `JobTextEmbedding` table for reusable embedding cache.
+
+## 3) Complete tech stack
+
+- **Monorepo**
+  - pnpm workspaces
+
+- **Root package**
+  - devDependencies: `concurrently`, `prettier`
+
+- **API app (`apps/api`)**
+  - framework/runtime: `@adonisjs/core`, `@adonisjs/auth`, `@adonisjs/cors`, `@adonisjs/lucid`, `reflect-metadata`
+  - database: `postgresql`, `pg`, `prisma`, `@prisma/client`, `@prisma/adapter-pg`
+  - AI: `ollama`
+  - validation/date/env: `@vinejs/vine`, `luxon`, `dotenv`
+  - devDependencies: `@adonisjs/assembler`, `@adonisjs/eslint-config`, `@adonisjs/prettier-config`, `@adonisjs/tsconfig`, `@japa/api-client`, `@japa/assert`, `@japa/plugin-adonisjs`, `@japa/runner`, `@swc/core`, `@types/luxon`, `@types/node`, `@types/pg`, `eslint`, `hot-hook`, `pino-pretty`, `prettier`, `ts-node-maintained`, `typescript`
+
+- **Desktop app (`apps/desktop`)**
+  - desktop/runtime: `electron`, `electron-vite`, `electron-builder`, `@electron-toolkit/preload`, `@electron-toolkit/utils`
+  - frontend: `react`, `react-dom`, `vite`, `@vitejs/plugin-react`, `typescript`
+  - UI/styling: `tailwindcss`, `@tailwindcss/vite`, `radix-ui`, `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css`, `lucide-react`
+  - state: `@reduxjs/toolkit`, `react-redux`
+  - automation + parsing: `playwright-core`, `pdf-parse`, `@types/pdf-parse`
+  - AI/env: `ollama`, `dotenv`, `@heyputer/puter.js`
+  - devDependencies: `@electron-toolkit/eslint-config-prettier`, `@electron-toolkit/eslint-config-ts`, `@electron-toolkit/tsconfig`, `@types/node`, `@types/react`, `@types/react-dom`, `eslint`, `eslint-plugin-react`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `prettier`, `ts-node`
+
+- **Infra + data + protocols used by the app**
+  - database: PostgreSQL
+  - local AI server: Ollama
+  - browser automation connection: CDP (`remote-debugging-port`)
+  - API style: REST JSON over HTTP
