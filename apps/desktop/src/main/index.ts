@@ -12,7 +12,7 @@ import {
 } from './ollama'
 import { PDFParse } from 'pdf-parse'
 import { writeFileSync, readFileSync, existsSync } from 'fs'
-import prisma from './db'
+import { api } from './api'
 
 // Playwright connects to Electron's own BrowserView via this CDP port
 app.commandLine.appendSwitch('remote-debugging-port', '9222')
@@ -176,7 +176,7 @@ ipcMain.handle('start-automation', async () => {
       const newCompanies: string[] = []
       for (const c of companiesOnScreen) {
         const fullUrl = getFullUrl(c)
-        const exists = await prisma.company.findUnique({ where: { url: fullUrl } })
+        const exists = await api.checkCompanyExists(fullUrl)
         if (!exists) newCompanies.push(c)
       }
 
@@ -197,12 +197,10 @@ ipcMain.handle('start-automation', async () => {
 
         const fullCompanyUrl = getFullUrl(relativeUrl)
         try {
-          await prisma.company.create({
-            data: {
-              url: fullCompanyUrl,
-              name: relativeUrl.replace('/companies/', ''),
-              status: 'visited'
-            }
+          await api.createCompany({
+            url: fullCompanyUrl,
+            name: relativeUrl.replace('/companies/', ''),
+            status: 'visited'
           })
         } catch (e) {
           console.error('Failed to save company to DB:', e)
@@ -257,18 +255,16 @@ ipcMain.handle('start-automation', async () => {
             ): Promise<void> => {
               try {
                 // Check if it already exists to avoid unique constraint errors
-                const exists = await prisma.application.findUnique({ where: { jobUrl } })
+                const exists = await api.checkApplicationExists(jobUrl)
                 if (exists) return
 
-                await prisma.application.create({
-                  data: {
-                    jobTitle,
-                    companyName,
-                    jobUrl,
-                    coverLetter: reason, // Store the reason in the cover letter field
-                    status: 'skipped',
-                    matchScore
-                  }
+                await api.createApplication({
+                  jobTitle,
+                  companyName,
+                  jobUrl,
+                  coverLetter: reason,
+                  status: 'skipped',
+                  matchScore
                 })
               } catch (e) {
                 console.error(`Failed to record skipped job: ${jobTitle}`, e)
@@ -380,15 +376,13 @@ ipcMain.handle('start-automation', async () => {
                         matchScore: fitResult.score
                       })
 
-                      const savedApp = await prisma.application.create({
-                        data: {
-                          jobTitle,
-                          companyName: relativeUrl.replace('/companies/', ''),
-                          jobUrl: fullJobUrl,
-                          coverLetter,
-                          status: 'submitted', // or 'drafted'
-                          matchScore: fitResult.score
-                        }
+                      const savedApp = await api.createApplication({
+                        jobTitle,
+                        companyName: relativeUrl.replace('/companies/', ''),
+                        jobUrl: fullJobUrl,
+                        coverLetter,
+                        status: 'submitted',
+                        matchScore: fitResult.score
                       })
                       log('Application saved to database.', { type: 'success', jobTitle })
                       console.log('Saved app ID:', savedApp.id)
@@ -531,9 +525,7 @@ ipcMain.handle('get-user-profile', async () => {
 
 ipcMain.handle('get-applications', async () => {
   try {
-    return await prisma.application.findMany({
-      orderBy: { appliedAt: 'desc' }
-    })
+    return await api.getApplications()
   } catch (error) {
     console.error('Failed to fetch applications:', error)
     return []
