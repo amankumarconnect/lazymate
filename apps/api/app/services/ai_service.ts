@@ -1,6 +1,6 @@
 import { Ollama } from "ollama";
 import prisma from "#services/prisma";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 export class AiService {
   private ollama: Ollama;
@@ -40,26 +40,50 @@ export class AiService {
     );
   }
 
+  private parseVectorText(vectorText: string): number[] {
+    const trimmed = vectorText.trim();
+    if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {
+      return [];
+    }
+
+    const values = trimmed
+      .slice(1, -1)
+      .split(",")
+      .map((value) => Number.parseFloat(value));
+
+    if (
+      !this.isNumberArray(values) ||
+      values.some((value) => !Number.isFinite(value))
+    ) {
+      return [];
+    }
+
+    return values;
+  }
+
+  private toVectorLiteral(values: number[]): string {
+    const sanitized = values.filter((value) => Number.isFinite(value));
+    return `[${sanitized.join(",")}]`;
+  }
+
   async getOrCreateCachedEmbedding(text: string): Promise<number[]> {
     const normalizedText = this.normalizeEmbeddingText(text);
     if (!normalizedText) return [];
 
     const textHash = this.getEmbeddingHash(normalizedText);
 
-    const cached = await prisma.jobTextEmbedding.findUnique({
-      where: {
-        model_textHash: {
-          model: this.modelEmbedding,
-          textHash,
-        },
-      },
-      select: {
-        embedding: true,
-      },
-    });
+    const cached = await prisma.$queryRaw<Array<{ embedding: string }>>`
+      SELECT "embedding"::text AS embedding
+      FROM "JobTextEmbedding"
+      WHERE "model" = ${this.modelEmbedding} AND "textHash" = ${textHash}
+      LIMIT 1
+    `;
 
-    if (cached && this.isNumberArray(cached.embedding)) {
-      return cached.embedding;
+    if (cached.length > 0) {
+      const parsed = this.parseVectorText(cached[0].embedding);
+      if (parsed.length > 0) {
+        return parsed;
+      }
     }
 
     const embedding = await this.getEmbedding(normalizedText);
@@ -68,24 +92,33 @@ export class AiService {
     }
 
     try {
-      await prisma.jobTextEmbedding.upsert({
-        where: {
-          model_textHash: {
-            model: this.modelEmbedding,
-            textHash,
-          },
-        },
-        create: {
-          model: this.modelEmbedding,
-          textHash,
-          normalizedText,
-          embedding,
-        },
-        update: {
-          normalizedText,
-          embedding,
-        },
-      });
+      const vectorLiteral = this.toVectorLiteral(embedding);
+
+      await prisma.$executeRaw`
+        INSERT INTO "JobTextEmbedding" (
+          "id",
+          "model",
+          "textHash",
+          "normalizedText",
+          "embedding",
+          "createdAt",
+          "updatedAt"
+        )
+        VALUES (
+          ${randomUUID()},
+          ${this.modelEmbedding},
+          ${textHash},
+          ${normalizedText},
+          ${vectorLiteral}::vector,
+          NOW(),
+          NOW()
+        )
+        ON CONFLICT ("model", "textHash")
+        DO UPDATE SET
+          "normalizedText" = EXCLUDED."normalizedText",
+          "embedding" = EXCLUDED."embedding",
+          "updatedAt" = NOW()
+      `;
     } catch (error) {
       console.error("Failed to persist job embedding cache:", error);
     }
