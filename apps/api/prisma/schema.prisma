@@ -1,9 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 model Company {
@@ -36,7 +39,7 @@ model JobTextEmbedding {
   model          String
   textHash       String
   normalizedText String
-  embedding      Json
+  embedding      Unsupported("vector")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

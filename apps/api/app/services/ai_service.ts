@@ -34,12 +34,6 @@ export class AiService {
     return createHash("sha256").update(normalizedText).digest("hex");
   }
 
-  private isNumberArray(value: unknown): value is number[] {
-    return (
-      Array.isArray(value) && value.every((item) => typeof item === "number")
-    );
-  }
-
   async getOrCreateCachedEmbedding(text: string): Promise<number[]> {
     const normalizedText = this.normalizeEmbeddingText(text);
     if (!normalizedText) return [];
@@ -58,8 +52,8 @@ export class AiService {
       },
     });
 
-    if (cached && this.isNumberArray(cached.embedding)) {
-      return cached.embedding;
+    if (cached && Array.isArray(cached.embedding)) {
+      return cached.embedding as number[];
     }
 
     const embedding = await this.getEmbedding(normalizedText);
