@@ -1,5 +1,5 @@
-import type { HttpContext } from '@adonisjs/core/http'
-import prisma from '#services/prisma'
+import type { HttpContext } from "@adonisjs/core/http";
+import prisma from "#services/prisma";
 
 export default class ApplicationsController {
   /**
@@ -7,8 +7,8 @@ export default class ApplicationsController {
    */
   async index({}: HttpContext) {
     return prisma.application.findMany({
-      orderBy: { appliedAt: 'desc' },
-    })
+      orderBy: { appliedAt: "desc" },
+    });
   }
 
   /**
@@ -16,20 +16,22 @@ export default class ApplicationsController {
    */
   async store({ request, response }: HttpContext) {
     const data = request.only([
-      'jobTitle',
-      'companyName',
-      'jobUrl',
-      'coverLetter',
-      'status',
-      'matchScore',
-    ])
+      "jobTitle",
+      "companyName",
+      "jobUrl",
+      "coverLetter",
+      "status",
+      "matchScore",
+    ]);
 
     const existing = await prisma.application.findUnique({
       where: { jobUrl: data.jobUrl },
-    })
+    });
 
     if (existing) {
-      return response.status(409).send({ message: 'Application already exists', data: existing })
+      return response
+        .status(409)
+        .send({ message: "Application already exists", data: existing });
     }
 
     const application = await prisma.application.create({
@@ -38,33 +40,33 @@ export default class ApplicationsController {
         companyName: data.companyName,
         jobUrl: data.jobUrl,
         coverLetter: data.coverLetter,
-        status: data.status || 'submitted',
+        status: data.status || "submitted",
         matchScore: data.matchScore,
       },
-    })
+    });
 
-    return response.status(201).send(application)
+    return response.status(201).send(application);
   }
 
   /**
    * Find application by Job URL
    */
   async findByJobUrl({ request, response }: HttpContext) {
-    const qs = request.qs()
-    const jobUrl = qs.jobUrl as string
+    const qs = request.qs();
+    const jobUrl = qs.jobUrl as string;
 
     if (!jobUrl) {
-      return response.badRequest({ message: 'Missing jobUrl query parameter' })
+      return response.badRequest({ message: "Missing jobUrl query parameter" });
     }
 
     const application = await prisma.application.findUnique({
       where: { jobUrl },
-    })
+    });
 
     if (!application) {
-      return response.notFound({ message: 'Application not found' })
+      return response.notFound({ message: "Application not found" });
     }
 
-    return application
+    return application;
   }
 }
